@@ -65,7 +65,22 @@ func init() {
 	flag.Parse()
 }
 
+func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
+	reply, err := xprop.GetProperty(xu, root, "_NET_ACTIVE_WINDOW")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//
+	return xproto.Window(xgb.Get32(reply.Value))
+}
+
+func something() {
+
+}
+
 func main() {
+	input := make([]byte, 10)
 
 	// Connect to the X server using the DISPLAY environment variable.
 	xu, err := xgbutil.NewConn()
@@ -92,16 +107,9 @@ func main() {
 	setup := xproto.Setup(xu.Conn())
 	root := setup.DefaultScreen(xu.Conn()).Root
 
-	// Get the atom id (i.e., intern an atom) of "_NET_ACTIVE_WINDOW".
-	reply, err := xprop.GetProperty(xu, root, "_NET_ACTIVE_WINDOW")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	//
-
-	winproto := xproto.Window(xgb.Get32(reply.Value))
-	win := xwindow.New(xu, winproto)
+	active := getActiveWindow(xu, root)
+	win := xwindow.New(xu, active)
 	//
 	// // Listen for Key{Press,Release} events.
 	win.Listen(xproto.EventMaskKeyPress, xproto.EventMaskKeyRelease)
@@ -113,36 +121,53 @@ func main() {
 	// // because we aren't trying to make a grab *and* because we want to listen
 	// // to *all* key press events, rather than just a particular key sequence
 	// // that has been pressed.
-	wid := win.Id
+
 	if flagRoot {
-		wid = xu.RootWin()
+		active = xu.RootWin()
 	}
 	xevent.KeyPressFun(
-		func(xu *xgbutil.XUtil, e xevent.KeyPressEvent) {
-			// keybind.LookupString does the magic of implementing parts of
-			// the X Keyboard Encoding to determine an english representation
-			// of the modifiers/keycode tuple.
-			// N.B. It's working for me, but probably isn't 100% correct in
-			// all environments yet.
-			modStr := keybind.ModifierString(e.State)
-			keyStr := keybind.LookupString(xu, e.State, e.Detail)
-			if len(modStr) > 0 {
-				log.Printf("Key: %s-%s\n", modStr, keyStr)
-			} else {
-				log.Println("Key:", keyStr)
-			}
-
-			if keybind.KeyMatch(xu, "Escape", e.State, e.Detail) {
-				if e.State&xproto.ModMaskControl > 0 {
+		func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
+			// Always have a way out.  Press ctrl+Escape to exit.
+			if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
+				if keyPress.State&xproto.ModMaskControl > 0 {
 					log.Println("Control-Escape detected. Quitting...")
 					xevent.Quit(xu)
 				}
 			}
-		}).Connect(xu, wid)
+
+			keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+			input = append(input, keyStr...)
+			if keyStr == " " {
+				// fmt.Println()
+				key := keyPress
+				for count := 0; count < len(input); count++ {
+					key.Detail = 22
+					key.Time = xproto.TimeCurrentTime
+					xproto.SendEvent(xu.Conn(), false, active, xproto.EventMaskKeyPress, string(key.Bytes()))
+				}
+				// fmt.Print(string(input))
+				input = nil
+			}
+
+			// keybind.LookupString does the magic of implementing parts of
+			// the X Keyboard Encoding to determine an english representation
+			// of the modifiers/keycode tuple.
+			// keyStr := keybind.LookupString(xu, xev.State, xev.Detail)
+			// modStr := keybind.ModifierString(e.State)
+
+			// if len(modStr) > 0 {
+			// 	log.Printf("Key: %s-%s\n", modStr, keyStr)
+			// } else {
+			// log.Println("Key:", keyStr)
+			// }
+
+			// fmt.Println(xev.String())
+
+		}).Connect(xu, active)
 
 	// If we want root, then we take over the entire keyboard.
 	if flagRoot {
-		if err := keybind.GrabKeyboard(xu, xu.RootWin()); err != nil {
+		if err := keybind.SmartGrab(xu, xu.RootWin()); err != nil {
 			log.Fatalf("Could not grab keyboard: %s", err)
 		}
 		log.Println("WARNING: We are taking *complete* control of the root " +
@@ -154,4 +179,5 @@ func main() {
 	// KeyPressEvents to your callback function.
 	log.Println("Program initialized. Start pressing keys!")
 	xevent.Main(xu)
+
 }
