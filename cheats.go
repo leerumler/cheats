@@ -72,112 +72,98 @@ func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
 	}
 
 	//
-	return xproto.Window(xgb.Get32(reply.Value))
+	active := xproto.Window(xgb.Get32(reply.Value))
+	return active
 }
 
-func something() {
+func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte) []byte {
+	// fmt.Println("replacing...")
+	nilKey := xproto.KeyPressEvent{
+		Sequence: 6,
+		// Detail:     37,
+		Time:       xproto.TimeCurrentTime,
+		Root:       *root,
+		Event:      *active,
+		Child:      0,
+		RootX:      1,
+		RootY:      1,
+		EventX:     1,
+		EventY:     1,
+		State:      0,
+		SameScreen: true,
+	}
 
+	// keys := <-input
+	// for count := 0; count < len(keys); count++ {
+	// 	backspace := nilKey
+	// 	backspace.Detail = 22
+	// 	xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+	// }
+	// keys := <-input:
+	for count := 0; count < len(input); count++ {
+		backspace := nilKey
+		backspace.Detail = 22
+		xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+	}
+	return []byte{}
+}
+
+func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte) []byte {
+	// fmt.Println("Listening...")
+
+	// Listen for KeyPress events on the active window.
+	xwindow.New(xu, *active).Listen(xproto.EventMaskKeyPress)
+
+	// keys := make([]byte, 10)
+
+	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
+		// Always have a way out.  Press ctrl+Escape to exit.
+		if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
+			if keyPress.State&xproto.ModMaskControl > 0 {
+				log.Println("Control-Escape detected. Quitting...")
+				xevent.Quit(xu)
+			}
+		}
+
+		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+		input = append(input, keyStr...)
+		if keyStr == " " {
+			// fmt.Print(input)
+			// input <- keys
+			xevent.Quit(xu)
+		}
+	}
+	xevent.KeyPressFun(listenForKeys).Connect(xu, *active)
+
+	// Finally, start the main event loop. This will route any appropriate
+	// KeyPressEvents to your callback function.
+	// log.Println("Program initialized. Start pressing keys!")
+	xevent.Main(xu)
+	return input
 }
 
 func main() {
-	input := make([]byte, 10)
-
-	// Connect to the X server using the DISPLAY environment variable.
+	// Connect to the X server using the DISPLAY environment variable
+	// and initialize keybind.
 	xu, err := xgbutil.NewConn()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Anytime the keybind (mousebind) package is used, keybind.Initialize
-	// *should* be called once. It isn't strictly necessary, but allows your
-	// keybindings to persist even if the keyboard mapping is changed during
-	// run-time. (Assuming you're using the xevent package's event loop.)
-	// It also handles the case when your modifier map is changed.
 	keybind.Initialize(xu)
 
-	// Create a new window. We will listen for key presses and translate them
-	// only when this window is in focus. (Similar to how `xev` works.)
-	// win, err := xwindow.Generate(X)
-	// if err != nil {
-	// 	log.Fatalf("Could not generate a new window X id: %s", err)
-	// }
-	// win.Create(X.RootWin(), 0, 0, 500, 500, xproto.CwBackPixel, 0xffffffff)
-
-	// Get the window id of the root window.
-	setup := xproto.Setup(xu.Conn())
-	root := setup.DefaultScreen(xu.Conn()).Root
-
-	//
+	// Get the window id of the root and active windows.
+	root := xproto.Setup(xu.Conn()).DefaultScreen(xu.Conn()).Root
 	active := getActiveWindow(xu, root)
-	win := xwindow.New(xu, active)
+	// win := xwindow.New(xu, active)
 	//
-	// // Listen for Key{Press,Release} events.
-	win.Listen(xproto.EventMaskKeyPress, xproto.EventMaskKeyRelease)
-	//
-	// // Map the window.
-	// win.Map()
-	//
-	// // Notice that we use xevent.KeyPressFun instead of keybind.KeyPressFun,
-	// // because we aren't trying to make a grab *and* because we want to listen
-	// // to *all* key press events, rather than just a particular key sequence
-	// // that has been pressed.
 
-	if flagRoot {
-		active = xu.RootWin()
-	}
-	xevent.KeyPressFun(
-		func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
-			// Always have a way out.  Press ctrl+Escape to exit.
-			if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
-				if keyPress.State&xproto.ModMaskControl > 0 {
-					log.Println("Control-Escape detected. Quitting...")
-					xevent.Quit(xu)
-				}
-			}
-
-			keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-			input = append(input, keyStr...)
-			if keyStr == " " {
-				// fmt.Println()
-				key := keyPress
-				for count := 0; count < len(input); count++ {
-					key.Detail = 22
-					key.Time = xproto.TimeCurrentTime
-					xproto.SendEvent(xu.Conn(), false, active, xproto.EventMaskKeyPress, string(key.Bytes()))
-				}
-				// fmt.Print(string(input))
-				input = nil
-			}
-
-			// keybind.LookupString does the magic of implementing parts of
-			// the X Keyboard Encoding to determine an english representation
-			// of the modifiers/keycode tuple.
-			// keyStr := keybind.LookupString(xu, xev.State, xev.Detail)
-			// modStr := keybind.ModifierString(e.State)
-
-			// if len(modStr) > 0 {
-			// 	log.Printf("Key: %s-%s\n", modStr, keyStr)
-			// } else {
-			// log.Println("Key:", keyStr)
-			// }
-
-			// fmt.Println(xev.String())
-
-		}).Connect(xu, active)
-
-	// If we want root, then we take over the entire keyboard.
-	if flagRoot {
-		if err := keybind.SmartGrab(xu, xu.RootWin()); err != nil {
-			log.Fatalf("Could not grab keyboard: %s", err)
-		}
-		log.Println("WARNING: We are taking *complete* control of the root " +
-			"window. The only way out is to press 'Control + Escape' or to " +
-			"close the window with the mouse.")
+	input := []byte{}
+	for {
+		input = listenClosely(xu, &root, &active, input)
+		input = replaceInput(xu, &root, &active, input)
+		// <-input
 	}
 
-	// Finally, start the main event loop. This will route any appropriate
-	// KeyPressEvents to your callback function.
-	log.Println("Program initialized. Start pressing keys!")
-	xevent.Main(xu)
-
+	// replaceInput(xu, root, active, input)
+	// input = nil
 }
