@@ -76,7 +76,7 @@ func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
 	return active
 }
 
-func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte) []byte {
+func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byte) {
 	// fmt.Println("replacing...")
 	nilKey := xproto.KeyPressEvent{
 		Sequence: 6,
@@ -99,22 +99,31 @@ func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte) 
 	// 	backspace.Detail = 22
 	// 	xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
 	// }
-	// keys := <-input:
-	for count := 0; count < len(input); count++ {
-		backspace := nilKey
-		backspace.Detail = 22
-		xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+
+	for {
+		select {
+		case keys := <-input:
+			// listen <- false
+			for range keys {
+				fmt.Println("backspace")
+				backspace := nilKey
+				backspace.Detail = 22
+				xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+			}
+			// listen <- true
+		}
 	}
-	return []byte{}
 }
 
-func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte) []byte {
+func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byte) {
 	// fmt.Println("Listening...")
 
 	// Listen for KeyPress events on the active window.
 	xwindow.New(xu, *active).Listen(xproto.EventMaskKeyPress)
 
 	// keys := make([]byte, 10)
+	var inputBytes []byte
+	// inputBytes = <-input
 
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 		// Always have a way out.  Press ctrl+Escape to exit.
@@ -126,20 +135,24 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input []byte)
 		}
 
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-		input = append(input, keyStr...)
+		// fmt.Println(keyStr)
 		if keyStr == " " {
-			// fmt.Print(input)
-			// input <- keys
-			xevent.Quit(xu)
+			// fmt.Println(string(inputBytes))
+			input <- inputBytes
+			inputBytes = nil
+		} else {
+			inputBytes = append(inputBytes, keyStr...)
 		}
 	}
+
+	//
 	xevent.KeyPressFun(listenForKeys).Connect(xu, *active)
 
 	// Finally, start the main event loop. This will route any appropriate
 	// KeyPressEvents to your callback function.
 	// log.Println("Program initialized. Start pressing keys!")
 	xevent.Main(xu)
-	return input
+
 }
 
 func main() {
@@ -155,14 +168,16 @@ func main() {
 	root := xproto.Setup(xu.Conn()).DefaultScreen(xu.Conn()).Root
 	active := getActiveWindow(xu, root)
 	// win := xwindow.New(xu, active)
-	//
 
-	input := []byte{}
-	for {
-		input = listenClosely(xu, &root, &active, input)
-		input = replaceInput(xu, &root, &active, input)
-		// <-input
-	}
+	input := make(chan []byte)
+	// listen := make(chan bool)
+
+	// listen <- true
+	go replaceInput(xu, &root, &active, input)
+	listenClosely(xu, &root, &active, input)
+
+	// <-input
+	// }
 
 	// replaceInput(xu, root, active, input)
 	// input = nil
