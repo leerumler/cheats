@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -93,13 +94,6 @@ func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []b
 		SameScreen: true,
 	}
 
-	// keys := <-input
-	// for count := 0; count < len(keys); count++ {
-	// 	backspace := nilKey
-	// 	backspace.Detail = 22
-	// 	xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
-	// }
-
 	for {
 		select {
 		case keys := <-input:
@@ -123,6 +117,7 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []
 
 	// keys := make([]byte, 10)
 	var inputBytes []byte
+
 	// inputBytes = <-input
 
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
@@ -137,6 +132,11 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
 		// fmt.Println(keyStr)
 		if keyStr == " " {
+			// Probably not the best way to clear backspaces out of the buffer, but it works.
+			for bytes.HasPrefix(inputBytes, []byte("BackSpace")) {
+				inputBytes = bytes.TrimPrefix(inputBytes, []byte("BackSpace"))
+			}
+
 			// fmt.Println(string(inputBytes))
 			input <- inputBytes
 			inputBytes = nil
