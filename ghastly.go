@@ -80,8 +80,8 @@ func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
 func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byte) {
 	// fmt.Println("replacing...")
 	nilKey := xproto.KeyPressEvent{
-		Sequence: 6,
-		// Detail:     37,
+		// Detail:     nil,
+		Sequence:   6,
 		Time:       xproto.TimeCurrentTime,
 		Root:       *root,
 		Event:      *active,
