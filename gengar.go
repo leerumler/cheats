@@ -73,9 +73,19 @@ func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, expansion string) 
 		keycodes := keybind.StrToKeycodes(xu, charStr)
 		// fmt.Println(keycodes)
 
+		var needShift bool
+		for _, match := range shiftySyms {
+			if match == charByte {
+				needShift = true
+			}
+		}
+
 		for _, keycode := range keycodes {
 			key := nilKey
 			key.Detail = keycode
+			if needShift {
+				key.State = xproto.ModMaskShift
+			}
 			xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(key.Bytes()))
 		}
 	}
@@ -111,7 +121,8 @@ func checkInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byt
 			if expansion != "" {
 				for range keys {
 					backspace := nilKey
-					backspace.Detail = 22
+					backspaceCodes := keybind.StrToKeycodes(xu, "BackSpace")
+					backspace.Detail = backspaceCodes[0]
 					xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
 					// log.Println("backspace")
 				}
