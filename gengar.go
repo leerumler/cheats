@@ -19,17 +19,17 @@ type expander struct {
 
 func testInfo() *[]expander {
 	exps := make([]expander, 3)
-	exps = append(exps, expander{[]byte("test1"), []byte("this is test 1")})
+	exps = append(exps, expander{[]byte("test1"), []byte("This is test 1!")})
 	exps = append(exps, expander{[]byte("test2"), []byte("this is test 2")})
 	exps = append(exps, expander{[]byte("test3"), []byte("this is test 3")})
 	return &exps
 }
 
-func parseMatch(input []byte, exps *[]expander) []byte {
-	var expansion []byte
+func parseMatch(input []byte, exps *[]expander) string {
+	var expansion string
 	for _, exp := range *exps {
 		if comp := bytes.Compare(input, exp.orig); comp == 0 {
-			expansion = exp.expansion
+			expansion = string(exp.expansion)
 		}
 	}
 	return expansion
@@ -46,7 +46,7 @@ func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
 	return active
 }
 
-func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, exp []byte) {
+func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, expansion string) {
 	nilKey := xproto.KeyPressEvent{
 		// Detail:     nil,
 		Sequence:   6,
@@ -64,11 +64,11 @@ func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, exp []byte) {
 
 	keybind.Initialize(xu)
 
-	for _, charByte := range exp {
+	for _, charByte := range expansion {
 		// var keycodes []xproto.Keycode
 		charStr := string(charByte)
-		if charStr == " " {
-			charStr = "space"
+		if sym, okay := weirdSyms[charByte]; okay {
+			charStr = sym
 		}
 		keycodes := keybind.StrToKeycodes(xu, charStr)
 		// fmt.Println(keycodes)
@@ -100,21 +100,22 @@ func checkInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byt
 		SameScreen: true,
 	}
 
-	exps := testInfo()
+	expansions := testInfo()
+
 	for {
 		select {
 		case keys := <-input:
 			keyCheck := bytes.TrimSpace(keys)
-			exp := parseMatch(keyCheck, exps)
+			expansion := parseMatch(keyCheck, expansions)
 			// fmt.Println(exp)
-			if exp != nil {
+			if expansion != "" {
 				for range keys {
 					backspace := nilKey
 					backspace.Detail = 22
 					xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
 					// log.Println("backspace")
 				}
-				sendKeys(xu, root, active, exp)
+				sendKeys(xu, root, active, expansion)
 			}
 			listen <- true
 		}
