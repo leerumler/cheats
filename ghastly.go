@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"flag"
 	"fmt"
 	"log"
@@ -97,28 +96,22 @@ func replaceInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []b
 	for {
 		select {
 		case keys := <-input:
-			// listen <- false
 			for range keys {
-				fmt.Println("backspace")
 				backspace := nilKey
 				backspace.Detail = 22
 				xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+				log.Println("backspace")
 			}
-			// listen <- true
 		}
 	}
 }
 
 func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byte) {
-	// fmt.Println("Listening...")
 
 	// Listen for KeyPress events on the active window.
 	xwindow.New(xu, *active).Listen(xproto.EventMaskKeyPress)
 
-	// keys := make([]byte, 10)
 	var inputBytes []byte
-
-	// inputBytes = <-input
 
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 		// Always have a way out.  Press ctrl+Escape to exit.
@@ -132,53 +125,45 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
 		// fmt.Println(keyStr)
 		if keyStr == " " {
-			// Probably not the best way to clear backspaces out of the buffer, but it works.
-			for bytes.HasPrefix(inputBytes, []byte("BackSpace")) {
-				inputBytes = bytes.TrimPrefix(inputBytes, []byte("BackSpace"))
-			}
 
 			// fmt.Println(string(inputBytes))
 			input <- inputBytes
-			inputBytes = nil
+			fmt.Println()
+			fmt.Println("inputBytes sent!")
+			xevent.Quit(xu)
+			fmt.Println("quit x session")
+
+			// inputBytes = nil
 		} else {
 			inputBytes = append(inputBytes, keyStr...)
 		}
 	}
 
-	//
-	xevent.KeyPressFun(listenForKeys).Connect(xu, *active)
-
 	// Finally, start the main event loop. This will route any appropriate
 	// KeyPressEvents to your callback function.
 	// log.Println("Program initialized. Start pressing keys!")
+	xevent.KeyPressFun(listenForKeys).Connect(xu, *active)
 	xevent.Main(xu)
-
 }
 
 func main() {
-	// Connect to the X server using the DISPLAY environment variable
-	// and initialize keybind.
-	xu, err := xgbutil.NewConn()
-	if err != nil {
-		log.Fatal(err)
-	}
-	keybind.Initialize(xu)
-
-	// Get the window id of the root and active windows.
-	root := xproto.Setup(xu.Conn()).DefaultScreen(xu.Conn()).Root
-	active := getActiveWindow(xu, root)
-	// win := xwindow.New(xu, active)
-
 	input := make(chan []byte)
-	// listen := make(chan bool)
 
-	// listen <- true
-	go replaceInput(xu, &root, &active, input)
-	listenClosely(xu, &root, &active, input)
+	for {
+		fmt.Println("Listening...")
+		// Connect to the X server using the DISPLAY environment variable
+		// and initialize keybind.
+		xu, err := xgbutil.NewConn()
+		if err != nil {
+			log.Fatal(err)
+		}
+		keybind.Initialize(xu)
 
-	// <-input
-	// }
+		// Get the window id of the root and active windows.
+		root := xproto.Setup(xu.Conn()).DefaultScreen(xu.Conn()).Root
+		active := getActiveWindow(xu, root)
 
-	// replaceInput(xu, root, active, input)
-	// input = nil
+		go replaceInput(xu, &root, &active, input)
+		listenClosely(xu, &root, &active, input)
+	}
 }
