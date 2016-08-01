@@ -19,6 +19,16 @@ type expander struct {
 	orig, expansion []byte
 }
 
+type comm struct {
+	input  chan []byte
+	listen chan bool
+}
+
+type xinfos struct {
+	xu           *xgbutil.XUtil
+	root, active *xproto.Window
+}
+
 // testInfo populates a slice of expanders with some simple testing data.
 func testInfo() *[]expander {
 	exps := make([]expander, 3)
@@ -88,16 +98,6 @@ func SendKeys(xinfo xinfos, expansion string) {
 	}
 }
 
-type comm struct {
-	input  chan []byte
-	listen chan bool
-}
-
-type xinfos struct {
-	xu           *xgbutil.XUtil
-	root, active *xproto.Window
-}
-
 // Backspace inserts as many backspaces as its told to the active window.
 func Backspace(xinfo xinfos, numKeys int) {
 	for i := 0; i < numKeys; i++ {
@@ -133,6 +133,8 @@ func BaitAndSwitch(xinfo xinfos, com comm) {
 				Backspace(xinfo, numKeys)
 				SendKeys(xinfo, expansion)
 			}
+
+			//
 			keybind.Detach(xinfo.xu, *xinfo.active)
 			xevent.Detach(xinfo.xu, *xinfo.active)
 			com.listen <- true
@@ -186,7 +188,7 @@ func conX() *xgbutil.XUtil {
 	return xu
 }
 
-// KeepFocus follows the _NET_ACTIVE_WINDOW and starts WatchKeys
+// KeepFocus follows the _NET_ACTIVE_WINDOW and starts WatchKeys.
 func KeepFocus(com comm) {
 
 	// Establish a connection to X, find the root and active windows.
@@ -232,7 +234,7 @@ func main() {
 		listen: listen,
 	}
 
-	// gengar will watch in a loop until killed.
+	// gengar will listen to keyboard input until killed.
 	for {
 		KeepFocus(com)
 	}
