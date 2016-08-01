@@ -20,8 +20,9 @@ type expander struct {
 }
 
 type comm struct {
-	input  chan []byte
-	listen chan bool
+	input   chan []byte
+	refresh chan bool
+	// wait  sync.WaitGroup
 }
 
 type xinfos struct {
@@ -112,7 +113,10 @@ func Backspace(xinfo xinfos, numKeys int) {
 }
 
 // BaitAndSwitch listens for input, which in this case is any word typed within the X server,
-func BaitAndSwitch(xinfo xinfos, com comm) {
+func BaitAndSwitch(com comm) {
+
+	// Establish a connection to X, find the root and active windows.
+	xinfo := conX()
 
 	expansions := testInfo()
 
@@ -120,10 +124,6 @@ func BaitAndSwitch(xinfo xinfos, com comm) {
 	for {
 		select {
 		case keys := <-com.input:
-
-			// Whenever BaitAndSwitch sees input, it immediately stops the main xevent loop.
-			xevent.Quit(xinfo.xu)
-
 			//
 			keyCheck := bytes.TrimSpace(keys)
 			expansion := parseMatch(keyCheck, expansions)
@@ -134,10 +134,15 @@ func BaitAndSwitch(xinfo xinfos, com comm) {
 				SendKeys(xinfo, expansion)
 			}
 
-			//
-			keybind.Detach(xinfo.xu, *xinfo.active)
-			xevent.Detach(xinfo.xu, *xinfo.active)
-			com.listen <- true
+		case <-com.refresh:
+
+			var err error
+			active, err := ewmh.ActiveWindowGet(xinfo.xu)
+			if err != nil {
+				log.Fatal(err)
+			}
+			xinfo.active = &active
+
 		}
 	}
 }
@@ -152,14 +157,6 @@ func WatchKeys(xinfo xinfos, com comm) {
 
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 
-		// Always have a way out.  Press ctrl+Escape at any time to exit.
-		// if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
-		// 	if keyPress.State&xproto.ModMaskControl > 0 {
-		// 		log.Println("Control-Escape detected. Quitting...")
-		// 		xevent.Quit(xu)
-		// 	}
-		// }
-
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
 		inputBytes = append(inputBytes, keyStr...)
 
@@ -171,71 +168,81 @@ func WatchKeys(xinfo xinfos, com comm) {
 			xevent.Quit(xu)
 		}
 	}
-
-	// Finally, start the main event loop. This will route any appropriate
-	// KeyPressEvents to your callback function.
-	// log.Println("Program initialized. Start pressing keys!")
 	xevent.KeyPressFun(listenForKeys).Connect(xinfo.xu, *xinfo.active)
-	xevent.Main(xinfo.xu)
 }
 
-func conX() *xgbutil.XUtil {
+func conX() xinfos {
+	// Create a space in memory to hold information about the current
+	// X connection state.
+	var xinfo xinfos
+
 	xu, err := xgbutil.NewConn()
 	if err != nil {
 		log.Fatal(err)
 	}
 	keybind.Initialize(xu)
-	return xu
+
+	xinfo.xu = xu
+	root := xinfo.xu.RootWin()
+	xinfo.root = &root
+
+	// Check the active window.
+	active, err := ewmh.ActiveWindowGet(xinfo.xu)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	xinfo.active = &active
+
+	return xinfo
 }
 
-// KeepFocus follows the _NET_ACTIVE_WINDOW and starts WatchKeys.
-func KeepFocus(com comm) {
+// KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window,
+// sends a com.refresh signal, and quits the X event loop.
+func KeepFocus(xinfo xinfos, com comm) {
 
-	// Establish a connection to X, find the root and active windows.
-	xu := conX()
-	root := xu.RootWin()
-	active, err := ewmh.ActiveWindowGet(xu)
+	//
+	err := xwindow.New(xinfo.xu, *xinfo.root).Listen(xproto.EventMaskPropertyChange)
 	if err != nil {
-		log.Println(err)
+		log.Fatal(err)
 	}
 
-	// Place that info in an xinfos struct.
-	xinfo := xinfos{
-		xu:     xu,
-		root:   &root,
-		active: &active,
-	}
-
-	// TODO: watchFocus() and
-
-	go BaitAndSwitch(xinfo, com)
-	WatchKeys(xinfo, com)
-
-	<-com.listen
-
-	// It's called the double tap.
-	keybind.Detach(xinfo.xu, *xinfo.active)
-	xevent.Detach(xinfo.xu, *xinfo.active)
-	xevent.Quit(xu)
+	xevent.PropertyNotifyFun(
+		func(xu *xgbutil.XUtil, propEve xevent.PropertyNotifyEvent) {
+			if xinfo.xu.AtomNames[propEve.Atom] == "_NET_ACTIVE_WINDOW" {
+				// log.Println(propEve.Atom)
+				log.Println("Focus changed, restarting event loop.")
+				com.refresh <- true
+				xevent.Quit(xinfo.xu)
+			}
+		}).Connect(xinfo.xu, *xinfo.root)
 
 }
 
 func main() {
 
 	// Establish some communication channels.
-	input := make(chan []byte)
-	listen := make(chan bool)
-
-	// One X event loop will be listening until it sends input,
-	// the loop will then hold while gengar responds to the input.
-	// normally, it should just trash everything and move on.
 	com := comm{
-		input:  input,
-		listen: listen,
+		input:   make(chan []byte),
+		refresh: make(chan bool),
 	}
+
+	go BaitAndSwitch(com)
 
 	// gengar will listen to keyboard input until killed.
 	for {
-		KeepFocus(com)
+
+		// Establish a connection to X, find the root and active windows.
+		xinfo := conX()
+
+		//
+		KeepFocus(xinfo, com)
+		WatchKeys(xinfo, com)
+		xevent.Main(xinfo.xu)
+
+		// It's called the double tap.
+		keybind.Detach(xinfo.xu, *xinfo.active)
+		xevent.Detach(xinfo.xu, *xinfo.active)
+		xevent.Quit(xinfo.xu)
 	}
 }
