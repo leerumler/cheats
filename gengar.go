@@ -13,6 +13,7 @@ import (
 	"github.com/BurntSushi/xgbutil/xwindow"
 )
 
+// expander defines a
 type expander struct {
 	orig, expansion []byte
 }
@@ -47,20 +48,6 @@ func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
 }
 
 func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, expansion string) {
-	nilKey := xproto.KeyPressEvent{
-		// Detail:     nil,
-		Sequence:   6,
-		Time:       xproto.TimeCurrentTime,
-		Root:       *root,
-		Event:      *active,
-		Child:      0,
-		RootX:      1,
-		RootY:      1,
-		EventX:     1,
-		EventY:     1,
-		State:      0,
-		SameScreen: true,
-	}
 
 	keybind.Initialize(xu)
 
@@ -83,32 +70,17 @@ func sendKeys(xu *xgbutil.XUtil, root, active *xproto.Window, expansion string) 
 		for _, keycode := range keycodes {
 			key := nilKey
 			key.Detail = keycode
+			key.Root = *root
+			key.Event = *active
 			if needShift {
 				key.State = xproto.ModMaskShift
 			}
 			xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(key.Bytes()))
 		}
 	}
-
-	// xproto.SendEvent(c, Propagate, Destination, EventMask, Event)
 }
 
 func checkInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byte, listen chan bool) {
-	// fmt.Println("replacing...")
-	nilKey := xproto.KeyPressEvent{
-		// Detail:     nil,
-		Sequence:   6,
-		Time:       xproto.TimeCurrentTime,
-		Root:       *root,
-		Event:      *active,
-		Child:      0,
-		RootX:      1,
-		RootY:      1,
-		EventX:     1,
-		EventY:     1,
-		State:      0,
-		SameScreen: true,
-	}
 
 	expansions := testInfo()
 
@@ -121,8 +93,10 @@ func checkInput(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []byt
 			if expansion != "" {
 				for range keys {
 					backspace := nilKey
-					backspaceCodes := keybind.StrToKeycodes(xu, "BackSpace")
-					backspace.Detail = backspaceCodes[0]
+					backCodes := keybind.StrToKeycodes(xu, "BackSpace")
+					backspace.Detail = backCodes[0]
+					backspace.Root = *root
+					backspace.Event = *active
 					xproto.SendEvent(xu.Conn(), false, *active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
 					// log.Println("backspace")
 				}
@@ -142,12 +116,12 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []
 
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 		// Always have a way out.  Press ctrl+Escape to exit.
-		if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
-			if keyPress.State&xproto.ModMaskControl > 0 {
-				log.Println("Control-Escape detected. Quitting...")
-				xevent.Quit(xu)
-			}
-		}
+		// if keybind.KeyMatch(xu, "Escape", keyPress.State, keyPress.Detail) {
+		// 	if keyPress.State&xproto.ModMaskControl > 0 {
+		// 		log.Println("Control-Escape detected. Quitting...")
+		// 		xevent.Quit(xu)
+		// 	}
+		// }
 
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
 		inputBytes = append(inputBytes, keyStr...)
@@ -157,6 +131,7 @@ func listenClosely(xu *xgbutil.XUtil, root, active *xproto.Window, input chan []
 
 			//
 			input <- inputBytes
+
 			// keybind.Detach(xu, *active)
 			// xevent.Detach(xu, *active)
 			xevent.Quit(xu)

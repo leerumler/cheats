@@ -1,5 +1,7 @@
 package main
 
+import "github.com/BurntSushi/xgb/xproto"
+
 var weirdSyms = map[rune]string{
 	' ':  "space",
 	'!':  "exclam",
@@ -84,4 +86,19 @@ var shiftySyms = []rune{
 	'X',
 	'Y',
 	'Z',
+}
+
+var nilKey = xproto.KeyPressEvent{
+	// Detail:     nil,
+	// Root:       *root,
+	// Event:      *active,
+	Sequence:   6,
+	Time:       xproto.TimeCurrentTime,
+	Child:      0,
+	RootX:      1,
+	RootY:      1,
+	EventX:     1,
+	EventY:     1,
+	State:      0,
+	SameScreen: true,
 }
