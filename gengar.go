@@ -129,8 +129,7 @@ func BaitAndSwitch(com comm) {
 			expansion := parseMatch(keyCheck, expansions)
 			// fmt.Println(exp)
 			if expansion != "" {
-				numKeys := len(keys)
-				Backspace(xinfo, numKeys)
+				Backspace(xinfo, len(keys))
 				SendKeys(xinfo, expansion)
 			}
 
