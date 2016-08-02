@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/BurntSushi/xgb"
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/ewmh"
 	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xevent"
-	"github.com/BurntSushi/xgbutil/xprop"
 	"github.com/BurntSushi/xgbutil/xwindow"
 )
 
@@ -53,15 +51,13 @@ func parseMatch(input []byte, exps *[]expander) string {
 
 // getActiveWindow returns the active window in xproto.Window form.  This can probably
 // be replaced with ewmh.ActiveWindowGet(), though that will need to be investigated.
-func getActiveWindow(xu *xgbutil.XUtil, root xproto.Window) xproto.Window {
-	reply, err := xprop.GetProperty(xu, root, "_NET_ACTIVE_WINDOW")
+func getActive(xinfo xinfos) *xproto.Window {
+	// Check the active window.
+	active, err := ewmh.ActiveWindowGet(xinfo.xu)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//
-	active := xproto.Window(xgb.Get32(reply.Value))
-	return active
+	return &active
 }
 
 // SendKeys lets gengar send simulated keystrokes to type messages in to the active window.  If it doesn't
@@ -157,6 +153,7 @@ func WatchKeys(xinfo xinfos, com comm) {
 	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 
 		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+		log.Println("Key logged:", keyStr)
 		inputBytes = append(inputBytes, keyStr...)
 
 		// fmt.Println(keyStr)
@@ -164,7 +161,12 @@ func WatchKeys(xinfo xinfos, com comm) {
 
 			//
 			com.input <- inputBytes
-			xevent.Quit(xu)
+
+			// keybind.Detach(xinfo.xu, *xinfo.active)
+			// xevent.Detach(xinfo.xu, *xinfo.active)
+			// keybind.Detach(xinfo.xu, *xinfo.root)
+			// xevent.Detach(xinfo.xu, *xinfo.root)
+			xevent.Quit(xinfo.xu)
 		}
 	}
 	xevent.KeyPressFun(listenForKeys).Connect(xinfo.xu, *xinfo.active)
@@ -212,6 +214,7 @@ func KeepFocus(xinfo xinfos, com comm) {
 				// log.Println(propEve.Atom)
 				log.Println("Focus changed, restarting event loop.")
 				com.refresh <- true
+
 				xevent.Quit(xinfo.xu)
 			}
 		}).Connect(xinfo.xu, *xinfo.root)
@@ -228,11 +231,17 @@ func main() {
 
 	go BaitAndSwitch(com)
 
+	xinfo := conX()
+
 	// gengar will listen to keyboard input until killed.
 	for {
 
+		// keybind.Initialize(xinfo.xu)
+		xinfo.xu.Quit = false
+
 		// Establish a connection to X, find the root and active windows.
-		xinfo := conX()
+		xinfo.active = getActive(xinfo)
+		log.Println("Starting listen loop.")
 
 		//
 		KeepFocus(xinfo, com)
@@ -240,6 +249,9 @@ func main() {
 		xevent.Main(xinfo.xu)
 
 		// It's called the double tap.
+
+		keybind.Detach(xinfo.xu, *xinfo.root)
+		xevent.Detach(xinfo.xu, *xinfo.root)
 		keybind.Detach(xinfo.xu, *xinfo.active)
 		xevent.Detach(xinfo.xu, *xinfo.active)
 		xevent.Quit(xinfo.xu)
