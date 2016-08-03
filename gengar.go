@@ -60,6 +60,32 @@ func getActive(xinfo xinfos) *xproto.Window {
 	return &active
 }
 
+func conX() xinfos {
+	// Create a space in memory to hold information about the current
+	// X connection state.
+	var xinfo xinfos
+
+	xu, err := xgbutil.NewConn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	keybind.Initialize(xu)
+
+	xinfo.xu = xu
+	root := xinfo.xu.RootWin()
+	xinfo.root = &root
+
+	// Check the active window.
+	active, err := ewmh.ActiveWindowGet(xinfo.xu)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	xinfo.active = &active
+
+	return xinfo
+}
+
 // SendKeys lets gengar send simulated keystrokes to type messages in to the active window.  If it doesn't
 // understand the keystroke (which it may not), it will do nothing.
 func SendKeys(xinfo xinfos, expansion string) {
@@ -146,7 +172,10 @@ func BaitAndSwitch(com comm) {
 func WatchKeys(xinfo xinfos, com comm) {
 
 	// Listen for KeyPress events on the active window.
-	xwindow.New(xinfo.xu, *xinfo.active).Listen(xproto.EventMaskKeyPress)
+	err := xwindow.New(xinfo.xu, *xinfo.active).Listen(xproto.EventMaskKeyPress)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	var inputBytes []byte
 
@@ -170,32 +199,6 @@ func WatchKeys(xinfo xinfos, com comm) {
 		}
 	}
 	xevent.KeyPressFun(listenForKeys).Connect(xinfo.xu, *xinfo.active)
-}
-
-func conX() xinfos {
-	// Create a space in memory to hold information about the current
-	// X connection state.
-	var xinfo xinfos
-
-	xu, err := xgbutil.NewConn()
-	if err != nil {
-		log.Fatal(err)
-	}
-	keybind.Initialize(xu)
-
-	xinfo.xu = xu
-	root := xinfo.xu.RootWin()
-	xinfo.root = &root
-
-	// Check the active window.
-	active, err := ewmh.ActiveWindowGet(xinfo.xu)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	xinfo.active = &active
-
-	return xinfo
 }
 
 // KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window,
