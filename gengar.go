@@ -90,7 +90,7 @@ func SendKeys(xinfo xinfos, expansion string) {
 			if needShift {
 				key.State = xproto.ModMaskShift
 			}
-			xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyPress, string(key.Bytes()))
+			xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyRelease, string(key.Bytes()))
 		}
 	}
 }
@@ -103,7 +103,7 @@ func Backspace(xinfo xinfos, numKeys int) {
 		backspace.Detail = backCodes[0]
 		backspace.Root = *xinfo.root
 		backspace.Event = *xinfo.active
-		xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyPress, string(backspace.Bytes()))
+		xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyRelease, string(backspace.Bytes()))
 		// log.Println("backspace")
 	}
 }
