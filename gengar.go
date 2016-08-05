@@ -49,40 +49,48 @@ func parseMatch(input []byte, exps *[]expander) string {
 	return expansion
 }
 
-// getActiveWindow returns the active window in xproto.Window form.  This can probably
-// be replaced with ewmh.ActiveWindowGet(), though that will need to be investigated.
+// getActiveWindow returns a pointer to the active window.
 func getActive(xinfo xinfos) *xproto.Window {
-	// Check the active window.
+
+	// Check the active window, and die if we can't get it.
 	active, err := ewmh.ActiveWindowGet(xinfo.xu)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Return a pointer to that value.
 	return &active
 }
 
 func conX() xinfos {
-	// Create a space in memory to hold information about the current
-	// X connection state.
+
+	// Create a space in memory to hold information
+	// about the current X connection state.
 	var xinfo xinfos
 
+	// Connect to X, or die.  Initialize keybind, so we can
+	// use some of its functions.
 	xu, err := xgbutil.NewConn()
 	if err != nil {
 		log.Fatal(err)
 	}
 	keybind.Initialize(xu)
 
+	// Store that connection in xinfo.
 	xinfo.xu = xu
+
+	// Check the root window and store that in xinfo.
 	root := xinfo.xu.RootWin()
 	xinfo.root = &root
 
-	// Check the active window.
+	// Check the active window, or die.  Store that in xinfo.
 	active, err := ewmh.ActiveWindowGet(xinfo.xu)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	xinfo.active = &active
 
+	// Finally, return that info.
 	return xinfo
 }
 
@@ -146,10 +154,12 @@ func BaitAndSwitch(com comm) {
 	for {
 		select {
 		case keys := <-com.input:
+
 			//
 			keyCheck := bytes.TrimSpace(keys)
 			expansion := parseMatch(keyCheck, expansions)
 			// fmt.Println(exp)
+
 			if expansion != "" {
 				Backspace(xinfo, len(keys))
 				SendKeys(xinfo, expansion)
@@ -158,6 +168,7 @@ func BaitAndSwitch(com comm) {
 		case <-com.refresh:
 
 			var err error
+
 			active, err := ewmh.ActiveWindowGet(xinfo.xu)
 			if err != nil {
 				log.Fatal(err)
@@ -177,28 +188,47 @@ func WatchKeys(xinfo xinfos, com comm) {
 		log.Fatal(err)
 	}
 
-	var inputBytes []byte
+	// This is where we'll be storing the keystrokes.
+	var keyBytes []byte
 
-	listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
+	// listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
+	//
+	// 	keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+	// 	log.Println("Key logged:", keyStr)
+	// 	inputBytes = append(inputBytes, keyStr...)
+	//
+	// 	// fmt.Println(keyStr)
+	// 	if keyStr == " " {
+	//
+	// 		//
+	// 		com.input <- inputBytes
+	//
+	// 		// keybind.Detach(xinfo.xu, *xinfo.active)
+	// 		// xevent.Detach(xinfo.xu, *xinfo.active)
+	// 		// keybind.Detach(xinfo.xu, *xinfo.root)
+	// 		// xevent.Detach(xinfo.xu, *xinfo.root)
+	// 		xevent.Quit(xinfo.xu)
+	// 	}
+	// }
 
-		keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-		log.Println("Key logged:", keyStr)
-		inputBytes = append(inputBytes, keyStr...)
+	//
+	xevent.KeyPressFun(
+		func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 
-		// fmt.Println(keyStr)
-		if keyStr == " " {
+			key := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+			log.Println("Key logged:", key)
+			keyBytes = append(keyBytes, key...)
 
-			//
-			com.input <- inputBytes
+			// fmt.Println(keyStr)
+			if key == " " {
 
-			// keybind.Detach(xinfo.xu, *xinfo.active)
-			// xevent.Detach(xinfo.xu, *xinfo.active)
-			// keybind.Detach(xinfo.xu, *xinfo.root)
-			// xevent.Detach(xinfo.xu, *xinfo.root)
-			xevent.Quit(xinfo.xu)
-		}
-	}
-	xevent.KeyPressFun(listenForKeys).Connect(xinfo.xu, *xinfo.active)
+				//
+				com.input <- keyBytes
+
+				//
+				xevent.Quit(xinfo.xu)
+			}
+		}).Connect(xinfo.xu, *xinfo.active)
 }
 
 // KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window,
@@ -232,31 +262,36 @@ func main() {
 		refresh: make(chan bool),
 	}
 
+	// Start Bait and Switch.
 	go BaitAndSwitch(com)
 
+	// Establish an X connection and get some information.
 	xinfo := conX()
 
 	// gengar will listen to keyboard input until killed.
 	for {
 
-		// keybind.Initialize(xinfo.xu)
+		// Initialize some values.  These are actually the default values, but
+		// we want to reset them in case they got unset, which they will be.
+		keybind.Initialize(xinfo.xu)
 		xinfo.xu.Quit = false
 
 		// Establish a connection to X, find the root and active windows.
 		xinfo.active = getActive(xinfo)
 		log.Println("Starting listen loop.")
 
-		//
+		// Hook on the callback functions.
 		KeepFocus(xinfo, com)
 		WatchKeys(xinfo, com)
 		xevent.Main(xinfo.xu)
 
-		// It's called the double tap.
-
+		// Detach the callback functions.
 		keybind.Detach(xinfo.xu, *xinfo.root)
 		xevent.Detach(xinfo.xu, *xinfo.root)
 		keybind.Detach(xinfo.xu, *xinfo.active)
 		xevent.Detach(xinfo.xu, *xinfo.active)
+
+		// Just in case.
 		xevent.Quit(xinfo.xu)
 	}
 }
