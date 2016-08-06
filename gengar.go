@@ -22,7 +22,6 @@ type expander struct {
 type comm struct {
 	input   chan []byte
 	refresh chan bool
-	// wait  sync.WaitGroup
 }
 
 // xinfos holds information about the current X connection state.
@@ -55,7 +54,7 @@ func parseMatch(input []byte, exps *[]expander) string {
 // getActiveWindow returns a pointer to the active window.
 func getActive(xinfo xinfos) *xproto.Window {
 
-	// Check the active window, and die if we can't get it.
+	// Check the active window, or die if we can't get it.
 	active, err := ewmh.ActiveWindowGet(xinfo.xu)
 	if err != nil {
 		log.Fatal(err)
@@ -137,7 +136,6 @@ func Backspace(xinfo xinfos, numKeys int) {
 		backspace.Root = *xinfo.root
 		backspace.Event = *xinfo.active
 		xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyRelease, string(backspace.Bytes()))
-		// log.Println("backspace")
 	}
 }
 
@@ -279,7 +277,12 @@ func main() {
 
 		// Hook on the callback functions.
 		KeepFocus(xinfo, com)
-		WatchKeys(xinfo, com)
+
+		// Don't try and start WatchKeys if we don't have an active window.
+		if *xinfo.active != 0 {
+			WatchKeys(xinfo, com)
+		}
+
 		xevent.Main(xinfo.xu)
 
 		// Detach the callback functions.
