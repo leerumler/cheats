@@ -17,12 +17,15 @@ type expander struct {
 	orig, expansion []byte
 }
 
+// comm defines a struct that holds communication channels between
+// our various goroutines.
 type comm struct {
 	input   chan []byte
 	refresh chan bool
 	// wait  sync.WaitGroup
 }
 
+// xinfos holds information about the current X connection state.
 type xinfos struct {
 	xu           *xgbutil.XUtil
 	root, active *xproto.Window
@@ -191,67 +194,52 @@ func WatchKeys(xinfo xinfos, com comm) {
 	// This is where we'll be storing the keystrokes.
 	var keyBytes []byte
 
-	// listenForKeys := func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
-	//
-	// 	keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-	// 	log.Println("Key logged:", keyStr)
-	// 	inputBytes = append(inputBytes, keyStr...)
-	//
-	// 	// fmt.Println(keyStr)
-	// 	if keyStr == " " {
-	//
-	// 		//
-	// 		com.input <- inputBytes
-	//
-	// 		// keybind.Detach(xinfo.xu, *xinfo.active)
-	// 		// xevent.Detach(xinfo.xu, *xinfo.active)
-	// 		// keybind.Detach(xinfo.xu, *xinfo.root)
-	// 		// xevent.Detach(xinfo.xu, *xinfo.root)
-	// 		xevent.Quit(xinfo.xu)
-	// 	}
-	// }
-
-	//
+	// Attach a callback function that listens for keypress events.
 	xevent.KeyPressFun(
 		func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 
-			key := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-			log.Println("Key logged:", key)
-			keyBytes = append(keyBytes, key...)
+			// Whenever we see a keypress event, look up what key was pressed
+			// and append that to our byte slice.
+			keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
+			keyBytes = append(keyBytes, keyStr...)
 
-			// fmt.Println(keyStr)
-			if key == " " {
+			// Log the key that was pressed.  This should really be disabled
+			// whenever it isn't necessary, as it's a bit of a security risk.
+			// log.Println("Key logged:", keyStr)
 
-				//
+			// If we get a space, send off the collected byte slice to BaitAndSwitch.
+			if keyStr == " " {
 				com.input <- keyBytes
 
-				//
-				xevent.Quit(xinfo.xu)
+				// Empty out keyBytes for the next round.
+				keyBytes = nil
+
+				// Kill the xevent loop.
+				// xevent.Quit(xinfo.xu)
 			}
 		}).Connect(xinfo.xu, *xinfo.active)
 }
 
-// KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window,
-// sends a com.refresh signal, and quits the X event loop.
+// KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window.
+// If a change is detected, it sends a com.refresh signal and quits the X event loop.
 func KeepFocus(xinfo xinfos, com comm) {
 
-	//
+	// Listen for property changes on the root window or die.
 	err := xwindow.New(xinfo.xu, *xinfo.root).Listen(xproto.EventMaskPropertyChange)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Whenever a change is detected, check if it was to the _NET_ACTIVE_WINDOW property.
+	// If it was, print to the log, send a signal to com.refresh, and quit the X event loop.
 	xevent.PropertyNotifyFun(
 		func(xu *xgbutil.XUtil, propEve xevent.PropertyNotifyEvent) {
 			if xinfo.xu.AtomNames[propEve.Atom] == "_NET_ACTIVE_WINDOW" {
-				// log.Println(propEve.Atom)
 				log.Println("Focus changed, restarting event loop.")
 				com.refresh <- true
-
 				xevent.Quit(xinfo.xu)
 			}
 		}).Connect(xinfo.xu, *xinfo.root)
-
 }
 
 func main() {
