@@ -12,6 +12,7 @@ var stopKeys = []string{
 
 var sendKeys = []string{
 	" ",
+	"Tab",
 	"Return",
 }
 
