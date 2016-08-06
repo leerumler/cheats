@@ -87,11 +87,7 @@ func conX() xinfos {
 	xinfo.root = &root
 
 	// Check the active window, or die.  Store that in xinfo.
-	active, err := ewmh.ActiveWindowGet(xinfo.xu)
-	if err != nil {
-		log.Fatal(err)
-	}
-	xinfo.active = &active
+	xinfo.active = getActive(xinfo)
 
 	// Finally, return that info.
 	return xinfo
@@ -178,6 +174,9 @@ func BaitAndSwitch(com comm) {
 		// If we receive a signal to refresh, reset the current active window.
 		case <-com.refresh:
 			xinfo.active = getActive(xinfo)
+
+			// Once we get some real expansions in here, we'll also want to refresh that
+			// data, but for now, we'll just stick to refreshing the active window.
 
 		}
 	}
