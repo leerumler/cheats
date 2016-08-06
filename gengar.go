@@ -1,8 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"log"
+	"strings"
 
 	"github.com/BurntSushi/xgb/xproto"
 	"github.com/BurntSushi/xgbutil"
@@ -14,13 +14,13 @@ import (
 
 // expander defines a struct that holds text epansion information.
 type expander struct {
-	orig, expansion []byte
+	orig, expansion string
 }
 
 // comm defines a struct that holds communication channels between
 // our various goroutines.
 type comm struct {
-	input   chan []byte
+	input   chan string
 	refresh chan bool
 }
 
@@ -33,18 +33,18 @@ type xinfos struct {
 // testInfo populates a slice of expanders with some simple testing data.
 func testInfo() *[]expander {
 	exps := make([]expander, 3)
-	exps = append(exps, expander{[]byte("test1"), []byte("This is test 1!")})
-	exps = append(exps, expander{[]byte("test2"), []byte("this is test 2")})
-	exps = append(exps, expander{[]byte("test3"), []byte("this is test 3")})
+	exps = append(exps, expander{"test1", "This is test 1!"})
+	exps = append(exps, expander{"test2", "this is test 2"})
+	exps = append(exps, expander{"test3", "this is test 3"})
 	return &exps
 }
 
 // parseMatch checks if there is a match for the input and returns either
 // an empty string for no match or the expansion for a match.
-func parseMatch(input []byte, exps *[]expander) string {
+func parseMatch(input string, exps *[]expander) string {
 	var expansion string
 	for _, exp := range *exps {
-		if comp := bytes.Compare(input, exp.orig); comp == 0 {
+		if comp := strings.Compare(input, exp.orig); comp == 0 {
 			expansion = string(exp.expansion)
 		}
 	}
@@ -99,12 +99,14 @@ func SendKeys(xinfo xinfos, expansion string) {
 	keybind.Initialize(xinfo.xu)
 
 	for _, charByte := range expansion {
+
 		// var keycodes []xproto.Keycode
 		charStr := string(charByte)
 		if sym, okay := weirdSyms[charByte]; okay {
 			charStr = sym
 		}
 		keycodes := keybind.StrToKeycodes(xinfo.xu, charStr)
+
 		// fmt.Println(keycodes)
 
 		var needShift bool
@@ -157,7 +159,7 @@ func BaitAndSwitch(com comm) {
 
 			// Log the received input.  This is for debugging purposes and should
 			// be disabled on production systems.  Gengar is not a keylogger.
-			log.Println("Received Input:", string(keys))
+			log.Println("Received Input:", keys)
 
 			// Check the input, and if it matches, return an expansion.
 			expansion := parseMatch(keys, expansions)
@@ -211,7 +213,7 @@ func WatchKeys(xinfo xinfos, com comm) {
 				if keyStr == send {
 
 					// Trim off the last keyStr before sending.
-					keys := bytes.TrimSuffix(keyBytes, []byte(send))
+					keys := strings.TrimSuffix(string(keyBytes), send)
 					com.input <- keys
 					keyBytes = nil
 				}
@@ -253,7 +255,7 @@ func main() {
 
 	// Establish some communication channels.
 	com := comm{
-		input:   make(chan []byte),
+		input:   make(chan string),
 		refresh: make(chan bool),
 	}
 
@@ -283,6 +285,7 @@ func main() {
 			WatchKeys(xinfo, com)
 		}
 
+		// Start the main event loop.
 		xevent.Main(xinfo.xu)
 
 		// Detach the callback functions.
@@ -293,5 +296,8 @@ func main() {
 
 		// Just in case.
 		xevent.Quit(xinfo.xu)
+
+		// Tell me when it's done.
+		log.Println("Listen loop stopped.")
 	}
 }
