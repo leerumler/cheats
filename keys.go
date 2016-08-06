@@ -27,6 +27,8 @@ var stopKeys = []string{
 
 	// Function Keys.
 	"Escape",
+	"Print",
+	"Pause",
 	"F1",
 	"F2",
 	"F3",
