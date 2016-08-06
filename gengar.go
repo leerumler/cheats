@@ -151,32 +151,33 @@ func BaitAndSwitch(com comm) {
 	// Establish a connection to X, find the root and active windows.
 	xinfo := conX()
 
+	// Load up possible expansions from testInfo().
 	expansions := testInfo()
 
-	// Listen and wait for input.
+	// Listen and wait for instructions in com channels.
 	for {
 		select {
+
+		// If we get input, check and replace.
 		case keys := <-com.input:
 
-			//
-			keyCheck := bytes.TrimSpace(keys)
-			expansion := parseMatch(keyCheck, expansions)
-			// fmt.Println(exp)
+			// Log the received input.  This is for debugging purposes and should
+			// be disabled on production systems.  Gengar is not a keylogger.
+			log.Println("Received Input:", string(keys))
 
+			// Check the input, and if it matches, return an expansion.
+			expansion := parseMatch(keys, expansions)
+
+			// If we got an expansion back, send a series of backspaces to wipe out
+			// the input and replace it with the expansion.
 			if expansion != "" {
-				Backspace(xinfo, len(keys))
+				Backspace(xinfo, len(keys)+1)
 				SendKeys(xinfo, expansion)
 			}
 
+		// If we receive a signal to refresh, reset the current active window.
 		case <-com.refresh:
-
-			var err error
-
-			active, err := ewmh.ActiveWindowGet(xinfo.xu)
-			if err != nil {
-				log.Fatal(err)
-			}
-			xinfo.active = &active
+			xinfo.active = getActive(xinfo)
 
 		}
 	}
@@ -205,18 +206,27 @@ func WatchKeys(xinfo xinfos, com comm) {
 
 			// Log the key that was pressed.  This should really be disabled
 			// whenever it isn't necessary, as it's a bit of a security risk.
-			// log.Println("Key logged:", keyStr)
+			log.Println("Key logged:", keyStr)
 
-			// If we get a space, send off the collected byte slice to BaitAndSwitch.
-			if keyStr == " " {
-				com.input <- keyBytes
+			// If we get a sendKey, send off the collected byte slice to BaitAndSwitch
+			// and empty out keyBytes for the next word.
+			for _, send := range sendKeys {
+				if keyStr == send {
 
-				// Empty out keyBytes for the next round.
-				keyBytes = nil
-
-				// Kill the xevent loop.
-				// xevent.Quit(xinfo.xu)
+					// Trim off the last keyStr before sending.
+					keys := bytes.TrimSuffix(keyBytes, []byte(send))
+					com.input <- keys
+					keyBytes = nil
+				}
 			}
+
+			// If we get a stopKey, just empty out keyBytes.
+			for _, stop := range stopKeys {
+				if keyStr == stop {
+					keyBytes = nil
+				}
+			}
+
 		}).Connect(xinfo.xu, *xinfo.active)
 }
 

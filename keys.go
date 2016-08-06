@@ -2,6 +2,19 @@ package main
 
 import "github.com/BurntSushi/xgb/xproto"
 
+var stopKeys = []string{
+	"Up",
+	"Down",
+	"Left",
+	"Right",
+	"BackSpace",
+}
+
+var sendKeys = []string{
+	" ",
+	"Return",
+}
+
 var weirdSyms = map[rune]string{
 	' ':  "space",
 	'!':  "exclam",
