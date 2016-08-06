@@ -101,6 +101,7 @@ func SendKeys(xinfo xinfos, expansion string) {
 	for _, charByte := range expansion {
 
 		// var keycodes []xproto.Keycode
+
 		charStr := string(charByte)
 		if sym, okay := weirdSyms[charByte]; okay {
 			charStr = sym
@@ -199,13 +200,27 @@ func WatchKeys(xinfo xinfos, com comm) {
 		func(xu *xgbutil.XUtil, keyPress xevent.KeyPressEvent) {
 
 			// Whenever we see a keypress event, look up what key was pressed
-			// and append that to our byte slice.
 			keyStr := keybind.LookupString(xu, keyPress.State, keyPress.Detail)
-			keyBytes = append(keyBytes, keyStr...)
 
-			// Log the key that was pressed.  This should really be disabled
-			// whenever it isn't necessary, as it's a bit of a security risk.
-			log.Println("Key logged:", keyStr)
+			// Check to see if the key is in skipKeys.
+			keep := true
+			for _, skip := range skipKeys {
+				if keyStr == skip {
+					log.Println("Skipped Key:", keyStr)
+					keep = false
+				}
+			}
+
+			// As long as it's not in skipKeys, add it to keyBytes.
+			if keep {
+
+				// and append that to our byte slice.
+				keyBytes = append(keyBytes, keyStr...)
+
+				// Log the key that was pressed.  This should really be disabled
+				// whenever it isn't necessary, as it's a bit of a security risk.
+				log.Println("Key logged:", keyStr)
+			}
 
 			// If we get a sendKey, send off the collected byte slice to BaitAndSwitch
 			// and empty out keyBytes for the next word.
@@ -222,6 +237,7 @@ func WatchKeys(xinfo xinfos, com comm) {
 			// If we get a stopKey, just empty out keyBytes.
 			for _, stop := range stopKeys {
 				if keyStr == stop {
+					log.Println("Not sending:", strings.TrimSuffix(string(keyBytes), stop))
 					keyBytes = nil
 				}
 			}
