@@ -114,15 +114,62 @@ func findExpansionID(exp *ggconf.Expander) int {
 func MapPhrase(exp *ggconf.Expander) {
 
 	// Find expansions.id for our insert.
-	expID := findExpansionID(exp)
+	exp.ID = findExpansionID(exp)
 
 	// Get pointer to database connection.
 	db := connectGGDB()
 
 	// Insert the expansion.
-	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2)", exp.Phrase, expID)
+	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2)", exp.Phrase, exp.ID)
 	if err != nil {
 		log.Fatal(err)
 
+	}
+}
+
+// ReadExpansions reads expansions from the database and returns a slice of ggconf.Expanders.
+func ReadExpansions() *[]ggconf.Expander {
+	var exps []ggconf.Expander
+
+	// Get pointer to database connection.
+	db := connectGGDB()
+
+	// Query the database for the expansions.
+	rows, err := db.Query("SELECT exp_id, phrase, expansion FROM phrases JOIN expansions ON phrases.exp_id = expansions.id")
+	defer rows.Close()
+
+	// Read through the results and populate exps with returned info.
+	for rows.Next() {
+		var exp ggconf.Expander
+		err = rows.Scan(&exp.ID, &exp.Phrase, &exp.Expansion)
+		exps = append(exps, exp)
+	}
+
+	// Die on error.
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Return pointer to exps.
+	return &exps
+}
+
+// CreateTestDB creates a test database.
+func CreateTestDB() {
+
+	// Create some testing expansions.
+	var exps []ggconf.Expander
+	exps = append(exps, ggconf.Expander{Phrase: "test1", Expansion: "This is test 1!", ID: 1})
+	exps = append(exps, ggconf.Expander{Phrase: "test2", Expansion: "this is test 2", ID: 2})
+	exps = append(exps, ggconf.Expander{Phrase: "test3", Expansion: "this is test 3", ID: 3})
+
+	// Wipe/create a blank gengar database.
+	CleanSlate()
+
+	// Insert each of our testing expansions.
+	for _, exp := range exps {
+		InsertExpansion(&exp)
+		MapPhrase(&exp)
 	}
 }
