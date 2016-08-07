@@ -1,6 +1,9 @@
 package gengar
 
+// When gengar hits a stopKey, it will reset its
+// collection of logged keystrokes.
 var stopKeys = []string{
+
 	// Navigation.
 	"Up",
 	"Down",
@@ -39,20 +42,25 @@ var stopKeys = []string{
 	"F10",
 	"L1",
 	"L2",
-
-	// Lock Keys.
-	"Scroll_Lock",
-	"Caps_Lock",
-	"Num_Lock",
 }
 
+// When gengar hits a sendKey, it will check the keystrokes its
+// collected and replace them if they match an expansion.
 var sendKeys = []string{
 	" ",
 	"Tab",
 	"Return",
 }
 
+// gengar ignores skipKeys.
 var skipKeys = []string{
+
+	// Shift keys.
 	"Shift_R",
 	"Shift_L",
+
+	// Lock Keys.
+	"Scroll_Lock",
+	"Caps_Lock",
+	"Num_Lock",
 }
