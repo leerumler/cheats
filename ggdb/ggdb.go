@@ -6,14 +6,11 @@ import (
 	"os"
 	"os/user"
 
+	"github.com/leerumler/gengar/ggconf"
+
 	// Import the SQLite driver.
 	_ "github.com/mattn/go-sqlite3"
 )
-
-// Expander defines a struct that holds text epansion information.
-type Expander struct {
-	Phrase, Expansion string
-}
 
 // findGGDB locates the gengar database file.
 func findGGDB() *string {
@@ -80,7 +77,7 @@ func CleanSlate() {
 }
 
 // InsertExpansion inserts an Expansion into gengar's database.
-func InsertExpansion(exp *Expander) {
+func InsertExpansion(exp *ggconf.Expander) {
 
 	// Get a pointer to the database connection.
 	db := connectGGDB()
@@ -94,7 +91,7 @@ func InsertExpansion(exp *Expander) {
 }
 
 // findExpansionID finds and returns the expansion ID from gengar's database.
-func findExpansionID(exp *Expander) int {
+func findExpansionID(exp *ggconf.Expander) int {
 
 	// Get a pointer to database connection.
 	db := connectGGDB()
@@ -114,7 +111,7 @@ func findExpansionID(exp *Expander) int {
 }
 
 // MapPhrase maps a phrase to an expansion in gengar's database.
-func MapPhrase(exp *Expander) {
+func MapPhrase(exp *ggconf.Expander) {
 
 	// Find expansions.id for our insert.
 	expID := findExpansionID(exp)

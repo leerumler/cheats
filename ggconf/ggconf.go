@@ -10,3 +10,9 @@ type Xinfos struct {
 	XUtil        *xgbutil.XUtil
 	Root, Active *xproto.Window
 }
+
+// Expander defines a struct that holds text epansion information.
+type Expander struct {
+	Phrase, Expansion string
+	ID                int
+}
