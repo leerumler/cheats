@@ -10,11 +10,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// expander defines a struct that holds text epansion information.
-type expander struct {
-	phrase, expansion string
+// Expander defines a struct that holds text epansion information.
+type Expander struct {
+	Phrase, Expansion string
 }
 
+// findGGDB locates the gengar database file.
 func findGGDB() *string {
 
 	// Check the current user.
@@ -31,88 +32,100 @@ func findGGDB() *string {
 	os.MkdirAll(confdir, 0700)
 
 	// Append database name and return a pointer.
-	dbfile := confdir + "/ggdb.db"
+	dbfile := confdir + "/gg.db"
 	return &dbfile
 }
 
-// CreateGengarDB creates an SQLite database to act as gengar's central data store.
-func CreateGengarDB() {
+// connectGGDB establishes a connection to Gengar's database.
+func connectGGDB() *sql.DB {
 
-	// Find the SQLite DB file.
+	// Find the database and open it.
 	dbfile := findGGDB()
-
-	// Open the database file.  This should create it if it doesn't exist.
 	db, err := sql.Open("sqlite3", *dbfile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer db.Close()
+	// defer db.Close()
 
+	// Return a pointer to that database connection.
+	return db
+}
+
+// CleanSlate creates an empty SQLite database to act as gengar's central data store.
+func CleanSlate() {
+
+	// Get a pointer to the database connection.
+	db := connectGGDB()
+
+	// Drop existing tables and (re-)create them.
 	createTables := `
-	drop table if exists expansions;
-	drop table if exists phrases;
-	create table expansions (
-		id integer primary key autoincrement,
-		expansion text
+	DROP TABLE IF EXISTS expansions;
+	DROP TABLE IF EXISTS phrases;
+	CREATE TABLE expansions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		expansion TEXT
 		);
-	create table phrases (
-		phrase text primary key,
-		exp_id integer,
-		foreign key (exp_id) references expansions(id)
+	CREATE TABLE phrases (
+		phrase TEXT PRIMARY KEY,
+		exp_id INTEGER,
+		FOREIGN KEY (exp_id) REFERENCES expansions(id)
 	);
 	`
+	_, err := db.Exec(createTables)
 
-	_, err = db.Exec(createTables)
+	// Die on error.
 	if err != nil {
-		log.Printf("%q: %s\n", err, createTables)
-		return
+		log.Fatal("Couldn't create CleanSlate:", err)
 	}
 }
 
 // InsertExpansion inserts an Expansion into gengar's database.
-func InsertExpansion(exp expander) {
+func InsertExpansion(exp *Expander) {
 
-	// Find the database and open it.
-	dbfile := findGGDB()
-	db, err := sql.Open("sqlite3", *dbfile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+	// Get a pointer to the database connection.
+	db := connectGGDB()
 
 	// Insert the expansion.
-	_, err = db.Exec("insert into expansions (expansion) values ($1);", exp.expansion)
+	_, err := db.Exec("INSERT INTO expansions (expansion) VALUES ($1);", exp.Expansion)
 	if err != nil {
 		log.Fatal(err)
 
 	}
 }
 
-func findExpansionID(exp expander) int {
-	// Find the database and open it.
-	dbfile := findGGDB()
-	db, err := sql.Open("sqlite3", *dbfile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+// findExpansionID finds and returns the expansion ID from gengar's database.
+func findExpansionID(exp *Expander) int {
 
+	// Get a pointer to database connection.
+	db := connectGGDB()
+
+	// Check the expansion ID in the database.
 	var expID int
-	err = db.QueryRow("select id from expansions where expansion=$1", exp.expansion).Scan(&expID)
+	err := db.QueryRow("SELECT id FROM expansions WHERE expansion=$1", exp.Expansion).Scan(&expID)
 	switch {
 	case err == sql.ErrNoRows:
 		log.Fatal("No matching expansions found.")
 	case err != nil:
 		log.Fatal(err)
-	default:
-		log.Println("Expansion ID is", expID)
 	}
 
+	// Return the ID.
 	return expID
-
 }
 
 // MapPhrase maps a phrase to an expansion in gengar's database.
-func MapPhrase(exp expander) {
+func MapPhrase(exp *Expander) {
 
+	// Find expansions.id for our insert.
+	expID := findExpansionID(exp)
+
+	// Get pointer to database connection.
+	db := connectGGDB()
+
+	// Insert the expansion.
+	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2)", exp.Phrase, expID)
+	if err != nil {
+		log.Fatal(err)
+
+	}
 }
