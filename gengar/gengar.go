@@ -1,4 +1,4 @@
-package main
+package gengar
 
 import (
 	"log"
@@ -10,6 +10,8 @@ import (
 	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xwindow"
+	"github.com/leerumler/gengar/ggconf"
+	"github.com/leerumler/gengar/ghostie"
 )
 
 // Expander defines a struct that holds text epansion information.
@@ -22,12 +24,6 @@ type expander struct {
 type comm struct {
 	input   chan string
 	refresh chan bool
-}
-
-// xinfos holds information about the current X connection state.
-type xinfos struct {
-	xu           *xgbutil.XUtil
-	root, active *xproto.Window
 }
 
 // testInfo populates a slice of expanders with some simple testing data.
@@ -52,10 +48,10 @@ func parseMatch(input string, exps *[]expander) string {
 }
 
 // getActiveWindow returns a pointer to the active window.
-func getActive(xinfo xinfos) *xproto.Window {
+func getActive(xinfo ggconf.Xinfos) *xproto.Window {
 
 	// Check the active window, or die if we can't get it.
-	active, err := ewmh.ActiveWindowGet(xinfo.xu)
+	active, err := ewmh.ActiveWindowGet(xinfo.XUtil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,11 +60,11 @@ func getActive(xinfo xinfos) *xproto.Window {
 	return &active
 }
 
-func conX() xinfos {
+func conX() ggconf.Xinfos {
 
 	// Create a space in memory to hold information
 	// about the current X connection state.
-	var xinfo xinfos
+	var xinfo ggconf.Xinfos
 
 	// Connect to X, or die.  Initialize keybind, so we can
 	// use some of its functions.
@@ -79,67 +75,17 @@ func conX() xinfos {
 	keybind.Initialize(xu)
 
 	// Store that connection in xinfo.
-	xinfo.xu = xu
+	xinfo.XUtil = xu
 
 	// Check the root window and store that in xinfo.
-	root := xinfo.xu.RootWin()
-	xinfo.root = &root
+	root := xinfo.XUtil.RootWin()
+	xinfo.Root = &root
 
 	// Check the active window, or die.  Store that in xinfo.
-	xinfo.active = getActive(xinfo)
+	xinfo.Active = getActive(xinfo)
 
 	// Finally, return that info.
 	return xinfo
-}
-
-// SendKeys lets gengar send simulated keystrokes to type messages in to the active window.  If it doesn't
-// understand the keystroke (which it may not), it will do nothing.
-func SendKeys(xinfo xinfos, expansion string) {
-
-	keybind.Initialize(xinfo.xu)
-
-	for _, charByte := range expansion {
-
-		// var keycodes []xproto.Keycode
-
-		charStr := string(charByte)
-		if sym, okay := weirdSyms[charByte]; okay {
-			charStr = sym
-		}
-		keycodes := keybind.StrToKeycodes(xinfo.xu, charStr)
-
-		// fmt.Println(keycodes)
-
-		var needShift bool
-		for _, match := range shiftySyms {
-			if match == charByte {
-				needShift = true
-			}
-		}
-
-		for _, keycode := range keycodes {
-			key := nilKey
-			key.Detail = keycode
-			key.Root = *xinfo.root
-			key.Event = *xinfo.active
-			if needShift {
-				key.State = xproto.ModMaskShift
-			}
-			xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyRelease, string(key.Bytes()))
-		}
-	}
-}
-
-// Backspace inserts as many backspaces as its told to the active window.
-func Backspace(xinfo xinfos, numKeys int) {
-	for i := 0; i < numKeys; i++ {
-		backspace := nilKey
-		backCodes := keybind.StrToKeycodes(xinfo.xu, "BackSpace")
-		backspace.Detail = backCodes[0]
-		backspace.Root = *xinfo.root
-		backspace.Event = *xinfo.active
-		xproto.SendEvent(xinfo.xu.Conn(), false, *xinfo.active, xproto.EventMaskKeyRelease, string(backspace.Bytes()))
-	}
 }
 
 // BaitAndSwitch listens for input, which in this case is any word typed within the X server,
@@ -168,13 +114,13 @@ func BaitAndSwitch(com comm) {
 			// If we got an expansion back, send a series of backspaces to wipe out
 			// the input and replace it with the expansion.
 			if expansion != "" {
-				Backspace(xinfo, len(keys)+1)
-				SendKeys(xinfo, expansion)
+				ghostie.Backspace(xinfo, len(keys)+1)
+				ghostie.SendKeys(xinfo, expansion)
 			}
 
 		// If we receive a signal to refresh, reset the current active window.
 		case <-com.refresh:
-			xinfo.active = getActive(xinfo)
+			xinfo.Active = getActive(xinfo)
 
 			// Once we get some real expansions in here, we'll also want to refresh that
 			// data, but for now, we'll just stick to refreshing the active window.
@@ -184,10 +130,10 @@ func BaitAndSwitch(com comm) {
 }
 
 // WatchKeys connects to the active window and sends input whenever it reaches a terminator.
-func WatchKeys(xinfo xinfos, com comm) {
+func WatchKeys(xinfo ggconf.Xinfos, com comm) {
 
 	// Listen for KeyPress events on the active window.
-	err := xwindow.New(xinfo.xu, *xinfo.active).Listen(xproto.EventMaskKeyPress)
+	err := xwindow.New(xinfo.XUtil, *xinfo.Active).Listen(xproto.EventMaskKeyPress)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -242,15 +188,15 @@ func WatchKeys(xinfo xinfos, com comm) {
 				}
 			}
 
-		}).Connect(xinfo.xu, *xinfo.active)
+		}).Connect(xinfo.XUtil, *xinfo.Active)
 }
 
 // KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window.
 // If a change is detected, it sends a com.refresh signal and quits the X event loop.
-func KeepFocus(xinfo xinfos, com comm) {
+func KeepFocus(xinfo ggconf.Xinfos, com comm) {
 
 	// Listen for property changes on the root window or die.
-	err := xwindow.New(xinfo.xu, *xinfo.root).Listen(xproto.EventMaskPropertyChange)
+	err := xwindow.New(xinfo.XUtil, *xinfo.Root).Listen(xproto.EventMaskPropertyChange)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -259,15 +205,16 @@ func KeepFocus(xinfo xinfos, com comm) {
 	// If it was, print to the log, send a signal to com.refresh, and quit the X event loop.
 	xevent.PropertyNotifyFun(
 		func(xu *xgbutil.XUtil, propEve xevent.PropertyNotifyEvent) {
-			if xinfo.xu.AtomNames[propEve.Atom] == "_NET_ACTIVE_WINDOW" {
+			if xinfo.XUtil.AtomNames[propEve.Atom] == "_NET_ACTIVE_WINDOW" {
 				log.Println("Focus changed, restarting event loop.")
 				com.refresh <- true
-				xevent.Quit(xinfo.xu)
+				xevent.Quit(xinfo.XUtil)
 			}
-		}).Connect(xinfo.xu, *xinfo.root)
+		}).Connect(xinfo.XUtil, *xinfo.Root)
 }
 
-func main() {
+// ListenClosely does some things.
+func ListenClosely() {
 
 	// Establish some communication channels.
 	com := comm{
@@ -286,32 +233,32 @@ func main() {
 
 		// Initialize some values.  These are actually the default values, but
 		// we want to reset them in case they got unset, which they will be.
-		keybind.Initialize(xinfo.xu)
-		xinfo.xu.Quit = false
+		keybind.Initialize(xinfo.XUtil)
+		xinfo.XUtil.Quit = false
 
 		// Establish a connection to X, find the root and active windows.
-		xinfo.active = getActive(xinfo)
+		xinfo.Active = getActive(xinfo)
 		log.Println("Starting listen loop.")
 
 		// Hook on the callback functions.
 		KeepFocus(xinfo, com)
 
 		// Don't try and start WatchKeys if we don't have an active window.
-		if *xinfo.active != 0 {
+		if *xinfo.Active != 0 {
 			WatchKeys(xinfo, com)
 		}
 
 		// Start the main event loop.
-		xevent.Main(xinfo.xu)
+		xevent.Main(xinfo.XUtil)
 
 		// Detach the callback functions.
-		keybind.Detach(xinfo.xu, *xinfo.root)
-		xevent.Detach(xinfo.xu, *xinfo.root)
-		keybind.Detach(xinfo.xu, *xinfo.active)
-		xevent.Detach(xinfo.xu, *xinfo.active)
+		keybind.Detach(xinfo.XUtil, *xinfo.Root)
+		xevent.Detach(xinfo.XUtil, *xinfo.Root)
+		keybind.Detach(xinfo.XUtil, *xinfo.Active)
+		xevent.Detach(xinfo.XUtil, *xinfo.Active)
 
 		// Just in case.
-		xevent.Quit(xinfo.xu)
+		xevent.Quit(xinfo.XUtil)
 
 		// Tell me when it's done.
 		log.Println("Listen loop stopped.")

@@ -1,4 +1,4 @@
-package main
+package gengar
 
 import "github.com/BurntSushi/xgb/xproto"
 
