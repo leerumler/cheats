@@ -12,9 +12,9 @@ import (
 	"github.com/BurntSushi/xgbutil/xwindow"
 )
 
-// expander defines a struct that holds text epansion information.
+// Expander defines a struct that holds text epansion information.
 type expander struct {
-	orig, expansion string
+	phrase, expansion string
 }
 
 // comm defines a struct that holds communication channels between
@@ -44,7 +44,7 @@ func testInfo() *[]expander {
 func parseMatch(input string, exps *[]expander) string {
 	var expansion string
 	for _, exp := range *exps {
-		if comp := strings.Compare(input, exp.orig); comp == 0 {
+		if comp := strings.Compare(input, exp.phrase); comp == 0 {
 			expansion = string(exp.expansion)
 		}
 	}
