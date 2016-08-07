@@ -237,7 +237,7 @@ func WatchKeys(xinfo xinfos, com comm) {
 			// If we get a stopKey, just empty out keyBytes.
 			for _, stop := range stopKeys {
 				if keyStr == stop {
-					log.Println("Not sending:", strings.TrimSuffix(string(keyBytes), stop))
+					log.Println("Not sending:", string(keyBytes))
 					keyBytes = nil
 				}
 			}
