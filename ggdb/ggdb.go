@@ -42,7 +42,6 @@ func connectGGDB() *sql.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// defer db.Close()
 
 	// Return a pointer to that database connection.
 	return db
@@ -53,6 +52,7 @@ func CleanSlate() {
 
 	// Get a pointer to the database connection.
 	db := connectGGDB()
+	defer db.Close()
 
 	// Drop existing tables and (re-)create them.
 	createTables := `
@@ -76,25 +76,12 @@ func CleanSlate() {
 	}
 }
 
-// InsertExpansion inserts an Expansion into gengar's database.
-func InsertExpansion(exp *ggconf.Expander) {
-
-	// Get a pointer to the database connection.
-	db := connectGGDB()
-
-	// Insert the expansion.
-	_, err := db.Exec("INSERT INTO expansions (expansion) VALUES ($1);", exp.Expansion)
-	if err != nil {
-		log.Fatal(err)
-
-	}
-}
-
 // findExpansionID finds and returns the expansion ID from gengar's database.
 func findExpansionID(exp *ggconf.Expander) int {
 
-	// Get a pointer to database connection.
+	// Connect to the database.
 	db := connectGGDB()
+	defer db.Close()
 
 	// Check the expansion ID in the database.
 	var expID int
@@ -110,14 +97,27 @@ func findExpansionID(exp *ggconf.Expander) int {
 	return expID
 }
 
+// InsertExpansion inserts an Expansion into gengar's database.
+func InsertExpansion(exp *ggconf.Expander) {
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Insert the expansion.
+	_, err := db.Exec("INSERT INTO expansions (expansion) VALUES ($1);", exp.Expansion)
+	if err != nil {
+		log.Fatal(err)
+
+	}
+}
+
 // MapPhrase maps a phrase to an expansion in gengar's database.
 func MapPhrase(exp *ggconf.Expander) {
 
-	// Find expansions.id for our insert.
-	exp.ID = findExpansionID(exp)
-
-	// Get pointer to database connection.
+	// Connect to the database.
 	db := connectGGDB()
+	defer db.Close()
 
 	// Insert the expansion.
 	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2)", exp.Phrase, exp.ID)
@@ -127,8 +127,8 @@ func MapPhrase(exp *ggconf.Expander) {
 	}
 }
 
-// ReadExpansions reads expansions from the database and returns a slice of ggconf.Expanders.
-func ReadExpansions() *[]ggconf.Expander {
+// ReadExpanders reads expansions from the database and returns a slice of ggconf.Expanders.
+func ReadExpanders() *[]ggconf.Expander {
 	var exps []ggconf.Expander
 
 	// Get pointer to database connection.

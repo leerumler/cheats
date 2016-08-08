@@ -11,13 +11,9 @@ import (
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xwindow"
 	"github.com/leerumler/gengar/ggconf"
+	"github.com/leerumler/gengar/ggdb"
 	"github.com/leerumler/gengar/ghostie"
 )
-
-// Expander defines a struct that holds text epansion information.
-type expander struct {
-	phrase, expansion string
-}
 
 // comm defines a struct that holds communication channels between
 // our various goroutines.
@@ -26,22 +22,13 @@ type comm struct {
 	refresh chan bool
 }
 
-// testInfo populates a slice of expanders with some simple testing data.
-func testInfo() *[]expander {
-	exps := make([]expander, 3)
-	exps = append(exps, expander{"test1", "This is test 1!"})
-	exps = append(exps, expander{"test2", "this is test 2"})
-	exps = append(exps, expander{"test3", "this is test 3"})
-	return &exps
-}
-
 // parseMatch checks if there is a match for the input and returns either
 // an empty string for no match or the expansion for a match.
-func parseMatch(input string, exps *[]expander) string {
+func parseMatch(input string, exps *[]ggconf.Expander) string {
 	var expansion string
 	for _, exp := range *exps {
-		if comp := strings.Compare(input, exp.phrase); comp == 0 {
-			expansion = string(exp.expansion)
+		if comp := strings.Compare(input, exp.Phrase); comp == 0 {
+			expansion = string(exp.Expansion)
 		}
 	}
 	return expansion
@@ -95,7 +82,7 @@ func BaitAndSwitch(com comm) {
 	xinfo := conX()
 
 	// Load up possible expansions from testInfo().
-	expansions := testInfo()
+	expanders := ggdb.ReadExpanders()
 
 	// Listen and wait for instructions in com channels.
 	for {
@@ -109,7 +96,7 @@ func BaitAndSwitch(com comm) {
 			log.Println("Received Input:", keys)
 
 			// Check the input, and if it matches, return an expansion.
-			expansion := parseMatch(keys, expansions)
+			expansion := parseMatch(keys, expanders)
 
 			// If we got an expansion back, send a series of backspaces to wipe out
 			// the input and replace it with the expansion.
@@ -118,13 +105,13 @@ func BaitAndSwitch(com comm) {
 				ghostie.SendKeys(xinfo, expansion)
 			}
 
-		// If we receive a signal to refresh, reset the current active window.
 		case <-com.refresh:
+
+			// If we receive a signal to refresh, reset the current active window
 			xinfo.Active = getActive(xinfo)
 
-			// Once we get some real expansions in here, we'll also want to refresh that
-			// data, but for now, we'll just stick to refreshing the active window.
-
+			// And re-read the expansion database.
+			expanders = ggdb.ReadExpanders()
 		}
 	}
 }
