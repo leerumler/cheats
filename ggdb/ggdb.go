@@ -12,6 +12,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// GGDB holds a connection to gengar's database.
+var GGDB *sql.DB
+
 // findGGDB locates the gengar database file.
 func findGGDB() *string {
 
@@ -33,7 +36,7 @@ func findGGDB() *string {
 	return &dbfile
 }
 
-// connectGGDB establishes a connection to Gengar's database.
+// ConnectGGDB establishes a connection to Gengar's database.
 func connectGGDB() *sql.DB {
 
 	// Find the database and open it.
@@ -133,9 +136,13 @@ func ReadExpanders() *[]ggconf.Expander {
 
 	// Get pointer to database connection.
 	db := connectGGDB()
+	defer db.Close()
 
 	// Query the database for the expansions.
 	rows, err := db.Query("SELECT exp_id, phrase, expansion FROM phrases JOIN expansions ON phrases.exp_id = expansions.id")
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer rows.Close()
 
 	// Read through the results and populate exps with returned info.
@@ -146,8 +153,7 @@ func ReadExpanders() *[]ggconf.Expander {
 	}
 
 	// Die on error.
-	err = rows.Err()
-	if err != nil {
+	if err = rows.Err(); err != nil {
 		log.Fatal(err)
 	}
 
