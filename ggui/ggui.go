@@ -69,8 +69,8 @@ func readExpanders() {
 	exps = ggdb.ReadExpanders()
 }
 
-// Example creates an example GUI.
-func Example() {
+// GengarMenu creates an example GUI.
+func GengarMenu() {
 
 	readExpanders()
 
@@ -81,7 +81,7 @@ func Example() {
 	defer gooey.Close()
 
 	gooey.SetLayout(drawPhrases)
-	gooey.SetLayout(drawExpansions)
+	// gooey.SetLayout(drawExpansions)
 
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)

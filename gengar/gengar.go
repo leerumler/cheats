@@ -175,6 +175,7 @@ func WatchKeys(xinfo ggconf.Xinfos, com comm) {
 				}
 			}
 
+			// Connect the callback function to the main event loop.
 		}).Connect(xinfo.XUtil, *xinfo.Active)
 }
 
