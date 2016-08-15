@@ -3,6 +3,7 @@ package ggui
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jroimartin/gocui"
 	"github.com/leerumler/gengar/ggconf"
@@ -56,6 +57,99 @@ func drawHeader(gooey *gocui.Gui) error {
 
 }
 
+func drawCategories(gooey *gocui.Gui) error {
+
+	// Get window size.
+	maxX, maxY := gooey.Size()
+
+	_, _, _, minY, err := gooey.ViewPosition("header")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if catHead, err := gooey.SetView("catHead", 0, minY, maxX/6, minY+2); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		fmt.Fprintln(catHead, "Categories")
+	}
+
+	if catView, err := gooey.SetView("categories", 0, minY+2, maxX/6, maxY-1); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		catView.SelBgColor = gocui.ColorCyan
+		catView.Highlight = true
+
+		cats := ggdb.ReadCategories()
+
+		for _, cat := range *cats {
+			category := padText(cat.Name, maxX)
+			fmt.Fprintln(catView, category)
+		}
+
+		_, posY := catView.Cursor()
+		curCatName, _ := catView.Line(posY)
+		curCatName = strings.TrimSpace(curCatName)
+		var curCat ggdb.Category
+		for _, cat := range *cats {
+			if curCatName == cat.Name {
+				curCat = cat
+			}
+		}
+		// fmt.Println(curCat.ID, curCat.Name)
+
+		drawCategoryExpansions(gooey, curCat)
+	}
+	return nil
+}
+
+func catView(gooey *gocui.Gui) error {
+	drawHeader(gooey)
+	drawCategories(gooey)
+	// drawExpansions(gooey)
+	return nil
+}
+
+func drawCategoryExpansions(gooey *gocui.Gui, cat ggdb.Category) error {
+	// Get window size.
+	maxX, maxY := gooey.Size()
+
+	_, _, _, minY, err := gooey.ViewPosition("header")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, _, minX, _, err := gooey.ViewPosition("categories")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if expHead, err := gooey.SetView("expHead", minX, minY, maxX-1, minY+2); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+		fmt.Fprintln(expHead, "Expansions")
+	}
+
+	if expView, err := gooey.SetView("expansions", minX, minY+2, maxX-1, maxY-1); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		exps := ggdb.ReadExpansionsFromCategories(cat)
+
+		for _, exp := range *exps {
+			expName := padText(exp.Name, maxX)
+			fmt.Fprintln(expView, expName)
+		}
+
+	}
+
+	return nil
+}
+
 func drawPhrases(gooey *gocui.Gui) error {
 
 	// Get window size.
@@ -92,7 +186,7 @@ func drawPhrases(gooey *gocui.Gui) error {
 
 }
 
-func drawExpansions(gooey *gocui.Gui) error {
+func drawPhraseExpansions(gooey *gocui.Gui) error {
 
 	// Get window size.
 	maxX, maxY := gooey.Size()
@@ -126,10 +220,10 @@ func drawExpansions(gooey *gocui.Gui) error {
 	return nil
 }
 
-func mapPhrases(gooey *gocui.Gui) error {
+func phraseView(gooey *gocui.Gui) error {
 	drawHeader(gooey)
 	drawPhrases(gooey)
-	drawExpansions(gooey)
+	drawPhraseExpansions(gooey)
 	return nil
 }
 
@@ -152,7 +246,7 @@ func GengarMenu() {
 	}
 	defer gooey.Close()
 
-	gooey.SetLayout(mapPhrases)
+	gooey.SetLayout(catView)
 
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
@@ -162,5 +256,3 @@ func GengarMenu() {
 		log.Panicln(err)
 	}
 }
-
-//

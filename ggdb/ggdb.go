@@ -24,6 +24,12 @@ type Expansion struct {
 	ID              int
 }
 
+// Category holds
+type Category struct {
+	ID   int
+	Name string
+}
+
 // GGDB holds a connection to gengar's database.
 var GGDB *sql.DB
 
@@ -183,6 +189,64 @@ func ReadExpanders() *[]ggconf.Expander {
 
 	// Return pointer to exps.
 	return &exps
+}
+
+// ReadExpansionsFromCategories does
+func ReadExpansionsFromCategories(cat Category) *[]Expansion {
+	var exps []Expansion
+
+	db := connectGGDB()
+	defer db.Close()
+
+	rows, err := db.Query("SELECT id, name, expansion FROM expansions WHERE cat_id=$1;", cat.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var exp Expansion
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
+		exps = append(exps, exp)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Return pointer to exps.
+	return &exps
+
+}
+
+// ReadCategories does
+func ReadCategories() *[]Category {
+	var cats []Category
+
+	// Get pointer to database connection.
+	db := connectGGDB()
+	defer db.Close()
+
+	rows, err := db.Query("SELECT id, name FROM categories;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cat Category
+		err = rows.Scan(&cat.ID, &cat.Name)
+		cats = append(cats, cat)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Return pointer to exps.
+	return &cats
 }
 
 // CreateTestDB creates a test database.
