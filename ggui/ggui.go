@@ -49,16 +49,16 @@ func padText(text string, maxX int) string {
 }
 
 // drawHeader adds the "Gengar Configuration Editor" header to the top of the menu.
-func drawHeader(ggmenu *curView) error {
+func drawHeader(menu *curView) error {
 
 	// The header will be dynamically placed at the top of the menu and will extend down two pixels.
-	if header, err := ggmenu.gooey.SetView("header", 0, 0, ggmenu.maxX, 2); err != nil {
+	if header, err := menu.gooey.SetView("header", 0, 0, menu.maxX, 2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
 		// The text will be centered at the top of the menu.
-		head := centerText("Gengar Configuration Editor", ggmenu.maxX)
+		head := centerText("Gengar Configuration Editor", menu.maxX)
 		fmt.Fprintln(header, head)
 	}
 
@@ -66,24 +66,24 @@ func drawHeader(ggmenu *curView) error {
 
 }
 
-func drawCategories(ggmenu *curView) error {
+func drawCategories(menu *curView) error {
 
 	// Get window size.
 	// maxX, maxY := gooey.Size()
 
-	_, _, _, minY, err := ggmenu.gooey.ViewPosition("header")
+	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if catHead, err := ggmenu.gooey.SetView("catHead", 0, minY, ggmenu.maxX/6, minY+2); err != nil {
+	if catHead, err := menu.gooey.SetView("catHead", 0, minY, menu.maxX/6, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		fmt.Fprintln(catHead, "Categories")
 	}
 
-	if catView, err := ggmenu.gooey.SetView("categories", 0, minY+2, ggmenu.maxX/6, ggmenu.maxY-1); err != nil {
+	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -94,7 +94,7 @@ func drawCategories(ggmenu *curView) error {
 		cats := ggdb.ReadCategories()
 
 		for _, cat := range *cats {
-			category := padText(cat.Name, ggmenu.maxX)
+			category := padText(cat.Name, menu.maxX)
 			fmt.Fprintln(catView, category)
 		}
 
@@ -109,43 +109,43 @@ func drawCategories(ggmenu *curView) error {
 		}
 		// fmt.Println(curCat.ID, curCat.Name)
 
-		ggmenu.cat = curCat
+		menu.cat = curCat
 
 	}
 	return nil
 }
 
-func drawExpansions(ggmenu *curView) error {
+func drawExpansions(menu *curView) error {
 
 	// Get window size.
 	// maxX, maxY := gooey.Size()
 
-	_, _, _, minY, err := ggmenu.gooey.ViewPosition("header")
+	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, _, minX, _, err := ggmenu.gooey.ViewPosition("categories")
+	_, _, minX, _, err := menu.gooey.ViewPosition("categories")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if expHead, err := ggmenu.gooey.SetView("expHead", minX, minY, (ggmenu.maxX/6)*5, minY+2); err != nil {
+	if expHead, err := menu.gooey.SetView("expHead", minX, minY, (menu.maxX/6)*5, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		fmt.Fprintln(expHead, "Expansions")
 	}
 
-	if expView, err := ggmenu.gooey.SetView("expansions", minX, minY+2, (ggmenu.maxX/6)*5, ggmenu.maxY-1); err != nil {
+	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, (menu.maxX/6)*5, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		exps := ggdb.ReadExpansionsInCategory(ggmenu.cat)
+		exps := ggdb.ReadExpansionsInCategory(menu.cat)
 
 		for _, exp := range *exps {
-			expName := padText(exp.Name, ggmenu.maxX)
+			expName := padText(exp.Name, menu.maxX)
 			fmt.Fprintln(expView, expName)
 		}
 
@@ -154,19 +154,19 @@ func drawExpansions(ggmenu *curView) error {
 	return nil
 }
 
-func drawPhrases(ggmenu *curView) error {
+func drawPhrases(menu *curView) error {
 
-	_, _, _, minY, err := ggmenu.gooey.ViewPosition("header")
+	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, _, minX, _, err := ggmenu.gooey.ViewPosition("expansions")
+	_, _, minX, _, err := menu.gooey.ViewPosition("expansions")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if phraseHead, err := ggmenu.gooey.SetView("phraseHead", minX, minY, ggmenu.maxX, minY+2); err != nil {
+	if phraseHead, err := menu.gooey.SetView("phraseHead", minX, minY, menu.maxX, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -174,7 +174,7 @@ func drawPhrases(ggmenu *curView) error {
 	}
 
 	//
-	if phraseView, err := ggmenu.gooey.SetView("phrases", minX, minY+2, ggmenu.maxX, ggmenu.maxY-1); err != nil {
+	if phraseView, err := menu.gooey.SetView("phrases", minX, minY+2, menu.maxX, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -182,26 +182,23 @@ func drawPhrases(ggmenu *curView) error {
 		phraseView.SelBgColor = gocui.ColorCyan
 		phraseView.Highlight = true
 
-		// for _, exp := range *exps {
-		// 	phrase := padText(exp.Phrase, maxX)
-		// 	fmt.Fprintln(phraseView, phrase)
-		// }
 	}
 
 	return nil
 
 }
 
-func catView(gooey *gocui.Gui) error {
+func ggMenu(gooey *gocui.Gui) error {
 
-	var ggmenu curView
-	ggmenu.gooey = gooey
-	ggmenu.maxX, ggmenu.maxY = ggmenu.gooey.Size()
+	var menu curView
+	menu.gooey = gooey
+	menu.maxX, menu.maxY = menu.gooey.Size()
 
-	drawHeader(&ggmenu)
-	drawCategories(&ggmenu)
-	drawExpansions(&ggmenu)
-	drawPhrases(&ggmenu)
+	drawHeader(&menu)
+	drawCategories(&menu)
+	drawExpansions(&menu)
+	drawPhrases(&menu)
+
 	return nil
 }
 
@@ -220,7 +217,7 @@ func GengarMenu() {
 	}
 	defer gooey.Close()
 
-	gooey.SetLayout(catView)
+	gooey.SetLayout(ggMenu)
 
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
