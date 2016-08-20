@@ -161,7 +161,7 @@ func MapPhrase(exp *Phrase) {
 }
 
 // ReadExpanders reads expansions from the database and returns a slice of ggconf.Expanders.
-func ReadExpanders() *[]ggconf.Expander {
+func ReadExpanders() []ggconf.Expander {
 	var exps []ggconf.Expander
 
 	// Get pointer to database connection.
@@ -188,11 +188,11 @@ func ReadExpanders() *[]ggconf.Expander {
 	}
 
 	// Return pointer to exps.
-	return &exps
+	return exps
 }
 
-// ReadExpansionsFromCategories does
-func ReadExpansionsInCategory(cat Category) *[]Expansion {
+// ReadExpansionsInCategory does
+func ReadExpansionsInCategory(cat Category) []Expansion {
 	var exps []Expansion
 
 	db := connectGGDB()
@@ -215,13 +215,13 @@ func ReadExpansionsInCategory(cat Category) *[]Expansion {
 		log.Fatal(err)
 	}
 
-	// Return pointer to exps.
-	return &exps
+	// Return exps.
+	return exps
 
 }
 
 // ReadCategories does
-func ReadCategories() *[]Category {
+func ReadCategories() []Category {
 	var cats []Category
 
 	// Get pointer to database connection.
@@ -245,8 +245,8 @@ func ReadCategories() *[]Category {
 		log.Fatal(err)
 	}
 
-	// Return pointer to exps.
-	return &cats
+	// Return cats.
+	return cats
 }
 
 // CreateTestDB creates a test database.

@@ -3,13 +3,12 @@ package ggui
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/jroimartin/gocui"
 	"github.com/leerumler/gengar/ggdb"
 )
 
-type curView struct {
+type ggMenu struct {
 	cat        ggdb.Category
 	exp        ggdb.Expansion
 	phrase     ggdb.Phrase
@@ -49,7 +48,7 @@ func padText(text string, maxX int) string {
 }
 
 // drawHeader adds the "Gengar Configuration Editor" header to the top of the menu.
-func drawHeader(menu *curView) error {
+func drawHeader(menu *ggMenu) error {
 
 	// The header will be dynamically placed at the top of the menu and will extend down two pixels.
 	if header, err := menu.gooey.SetView("header", 0, 0, menu.maxX, 2); err != nil {
@@ -66,7 +65,7 @@ func drawHeader(menu *curView) error {
 
 }
 
-func drawCategories(menu *curView) error {
+func drawCategories(menu *ggMenu) error {
 
 	// Get window size.
 	// maxX, maxY := gooey.Size()
@@ -92,30 +91,31 @@ func drawCategories(menu *curView) error {
 		catView.Highlight = true
 
 		cats := ggdb.ReadCategories()
+		menu.cat = cats[0]
 
-		for _, cat := range *cats {
+		for _, cat := range cats {
 			category := padText(cat.Name, menu.maxX)
 			fmt.Fprintln(catView, category)
 		}
 
-		_, posY := catView.Cursor()
-		curCatName, _ := catView.Line(posY)
-		curCatName = strings.TrimSpace(curCatName)
-		var curCat ggdb.Category
-		for _, cat := range *cats {
-			if curCatName == cat.Name {
-				curCat = cat
-			}
-		}
-		// fmt.Println(curCat.ID, curCat.Name)
+		// Get category under cursor
+		// _, posY := catView.Cursor()
+		// curCatName, _ := catView.Line(posY)
+		// curCatName = strings.TrimSpace(curCatName)
+		// var curCat ggdb.Category
+		// for _, cat := range cats {
+		// 	if curCatName == cat.Name {
+		// 		curCat = cat
+		// 	}
+		// }
 
-		menu.cat = curCat
+		// fmt.Println(curCat.ID, curCat.Name)
 
 	}
 	return nil
 }
 
-func drawExpansions(menu *curView) error {
+func drawExpansions(menu *ggMenu) error {
 
 	// Get window size.
 	// maxX, maxY := gooey.Size()
@@ -143,8 +143,9 @@ func drawExpansions(menu *curView) error {
 		}
 
 		exps := ggdb.ReadExpansionsInCategory(menu.cat)
+		menu.exp = exps[0]
 
-		for _, exp := range *exps {
+		for _, exp := range exps {
 			expName := padText(exp.Name, menu.maxX)
 			fmt.Fprintln(expView, expName)
 		}
@@ -154,7 +155,7 @@ func drawExpansions(menu *curView) error {
 	return nil
 }
 
-func drawPhrases(menu *curView) error {
+func drawPhrases(menu *ggMenu) error {
 
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
@@ -188,9 +189,9 @@ func drawPhrases(menu *curView) error {
 
 }
 
-func ggMenu(gooey *gocui.Gui) error {
+func runMenu(gooey *gocui.Gui) error {
 
-	var menu curView
+	var menu ggMenu
 	menu.gooey = gooey
 	menu.maxX, menu.maxY = menu.gooey.Size()
 
@@ -217,7 +218,7 @@ func GengarMenu() {
 	}
 	defer gooey.Close()
 
-	gooey.SetLayout(ggMenu)
+	gooey.SetLayout(runMenu)
 
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
