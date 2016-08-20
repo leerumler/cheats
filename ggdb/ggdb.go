@@ -192,7 +192,7 @@ func ReadExpanders() *[]ggconf.Expander {
 }
 
 // ReadExpansionsFromCategories does
-func ReadExpansionsFromCategories(cat Category) *[]Expansion {
+func ReadExpansionsInCategory(cat Category) *[]Expansion {
 	var exps []Expansion
 
 	db := connectGGDB()
