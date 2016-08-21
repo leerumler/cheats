@@ -10,7 +10,6 @@ import (
 	"github.com/BurntSushi/xgbutil/keybind"
 	"github.com/BurntSushi/xgbutil/xevent"
 	"github.com/BurntSushi/xgbutil/xwindow"
-	"github.com/leerumler/gengar/ggconf"
 	"github.com/leerumler/gengar/ggdb"
 	"github.com/leerumler/gengar/ghostie"
 )
@@ -35,7 +34,7 @@ func parseMatch(input string, exps []ggdb.Expander) string {
 }
 
 // getActiveWindow returns a pointer to the active window.
-func getActive(xinfo ggconf.Xinfos) *xproto.Window {
+func getActive(xinfo ghostie.Xinfos) *xproto.Window {
 
 	// Check the active window, or die if we can't get it.
 	active, err := ewmh.ActiveWindowGet(xinfo.XUtil)
@@ -47,11 +46,11 @@ func getActive(xinfo ggconf.Xinfos) *xproto.Window {
 	return &active
 }
 
-func conX() ggconf.Xinfos {
+func conX() ghostie.Xinfos {
 
 	// Create a space in memory to hold information
 	// about the current X connection state.
-	var xinfo ggconf.Xinfos
+	var xinfo ghostie.Xinfos
 
 	// Connect to X, or die.  Initialize keybind, so we can
 	// use some of its functions.
@@ -117,7 +116,7 @@ func BaitAndSwitch(com comm) {
 }
 
 // WatchKeys connects to the active window and sends input whenever it reaches a terminator.
-func WatchKeys(xinfo ggconf.Xinfos, com comm) {
+func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 
 	// Listen for KeyPress events on the active window.
 	err := xwindow.New(xinfo.XUtil, *xinfo.Active).Listen(xproto.EventMaskKeyPress)
@@ -181,7 +180,7 @@ func WatchKeys(xinfo ggconf.Xinfos, com comm) {
 
 // KeepFocus watches for changes in the _NET_ACTIVE_WINDOW property of the root window.
 // If a change is detected, it sends a com.refresh signal and quits the X event loop.
-func KeepFocus(xinfo ggconf.Xinfos, com comm) {
+func KeepFocus(xinfo ghostie.Xinfos, com comm) {
 
 	// Listen for property changes on the root window or die.
 	err := xwindow.New(xinfo.XUtil, *xinfo.Root).Listen(xproto.EventMaskPropertyChange)

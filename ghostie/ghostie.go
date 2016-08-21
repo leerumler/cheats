@@ -2,13 +2,19 @@ package ghostie
 
 import (
 	"github.com/BurntSushi/xgb/xproto"
+	"github.com/BurntSushi/xgbutil"
 	"github.com/BurntSushi/xgbutil/keybind"
-	"github.com/leerumler/gengar/ggconf"
 )
+
+// Xinfos holds information about the current X connection state.
+type Xinfos struct {
+	XUtil        *xgbutil.XUtil
+	Root, Active *xproto.Window
+}
 
 // SendKeys lets ghostie send simulated keystrokes to type messages in to the active window.  If it doesn't
 // understand the keystroke (which it may not), it will do nothing.
-func SendKeys(xinfo ggconf.Xinfos, expansion string) {
+func SendKeys(xinfo Xinfos, expansion string) {
 
 	keybind.Initialize(xinfo.XUtil)
 
@@ -45,7 +51,7 @@ func SendKeys(xinfo ggconf.Xinfos, expansion string) {
 }
 
 // Backspace inserts as many backspaces as its told to the active window.
-func Backspace(xinfo ggconf.Xinfos, numKeys int) {
+func Backspace(xinfo Xinfos, numKeys int) {
 	for i := 0; i < numKeys; i++ {
 		backspace := nilKey
 		backCodes := keybind.StrToKeycodes(xinfo.XUtil, "BackSpace")
