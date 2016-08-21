@@ -3,6 +3,7 @@ package ggui
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jroimartin/gocui"
 	"github.com/leerumler/gengar/ggdb"
@@ -65,16 +66,16 @@ func drawHeader(menu *ggMenu) error {
 
 }
 
+// drawCategories creates the categories view, with a header.
 func drawCategories(menu *ggMenu) error {
 
-	// Get window size.
-	// maxX, maxY := gooey.Size()
-
+	// Find minY, which will be the bottom of the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Create a view holding the category header.
 	if catHead, err := menu.gooey.SetView("catHead", 0, minY, menu.maxX/6, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -82,26 +83,27 @@ func drawCategories(menu *ggMenu) error {
 		fmt.Fprintln(catHead, "Categories")
 	}
 
+	// Create a new for the categories themselves.
 	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
+		// Selected category will be highlighted in Cyan.
 		catView.SelBgColor = gocui.ColorCyan
 		catView.Highlight = true
 
+		// Read the categories from the database and set the currently
+		// selected category to the first category in the list.
 		cats := ggdb.ReadCategories()
 		menu.cat = cats[0]
 
+		// Print each of the categories to the view.
 		for _, cat := range cats {
 			category := padText(cat.Name, menu.maxX)
 			fmt.Fprintln(catView, category)
 		}
 
-		// Get category under cursor
-		// _, posY := catView.Cursor()
-		// curCatName, _ := catView.Line(posY)
-		// curCatName = strings.TrimSpace(curCatName)
 		// var curCat ggdb.Category
 		// for _, cat := range cats {
 		// 	if curCatName == cat.Name {
@@ -117,19 +119,19 @@ func drawCategories(menu *ggMenu) error {
 
 func drawExpansions(menu *ggMenu) error {
 
-	// Get window size.
-	// maxX, maxY := gooey.Size()
-
+	// Find minY, which will be the bottom of the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Find minX, which will be the right side of categories view.
 	_, _, minX, _, err := menu.gooey.ViewPosition("categories")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Create a view for the expansions header.
 	if expHead, err := menu.gooey.SetView("expHead", minX, minY, (menu.maxX/6)*5, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -137,19 +139,22 @@ func drawExpansions(menu *ggMenu) error {
 		fmt.Fprintln(expHead, "Expansions")
 	}
 
+	// Create the expansions view, which will list the expansions within the currently selected category.
 	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, (menu.maxX/6)*5, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
+		// Get the expansions from the database and set the currently
+		// selected expansion to the first item in the list.
 		exps := ggdb.ReadExpansionsInCategory(menu.cat)
 		menu.exp = exps[0]
 
+		// Print the expansions to the view.
 		for _, exp := range exps {
 			expName := padText(exp.Name, menu.maxX)
 			fmt.Fprintln(expView, expName)
 		}
-
 	}
 
 	return nil
@@ -187,6 +192,15 @@ func drawPhrases(menu *ggMenu) error {
 
 	return nil
 
+}
+
+// readSel reads the currently selected line and returns a string
+// containing its contents, without trailing spaces.
+func readSel(curView *gocui.View) string {
+	_, posY := curView.Cursor()
+	selection, _ := curView.Line(posY)
+	selection = strings.TrimSpace(selection)
+	return selection
 }
 
 func runMenu(gooey *gocui.Gui) error {
