@@ -66,7 +66,7 @@ func drawHeader(menu *ggMenu) error {
 
 }
 
-// drawCategories creates the categories view, with a header.
+// drawCategories creates the categories view, which displays all available categories.
 func drawCategories(menu *ggMenu) error {
 
 	// Find minY, which will be the bottom of the header view.
@@ -75,8 +75,11 @@ func drawCategories(menu *ggMenu) error {
 		log.Fatal(err)
 	}
 
+	// Set maxX coordinate as 1/6 of the menu size.
+	maxX := menu.maxX / 6
+
 	// Create a view holding the category header.
-	if catHead, err := menu.gooey.SetView("catHead", 0, minY, menu.maxX/6, minY+2); err != nil {
+	if catHead, err := menu.gooey.SetView("catHead", 0, minY, maxX, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -84,7 +87,7 @@ func drawCategories(menu *ggMenu) error {
 	}
 
 	// Create a new for the categories themselves.
-	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY-1); err != nil {
+	if catView, err := menu.gooey.SetView("categories", 0, minY+2, maxX, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -100,23 +103,16 @@ func drawCategories(menu *ggMenu) error {
 
 		// Print each of the categories to the view.
 		for _, cat := range cats {
-			category := padText(cat.Name, menu.maxX)
+			category := padText(cat.Name, maxX)
 			fmt.Fprintln(catView, category)
 		}
-
-		// var curCat ggdb.Category
-		// for _, cat := range cats {
-		// 	if curCatName == cat.Name {
-		// 		curCat = cat
-		// 	}
-		// }
-
-		// fmt.Println(curCat.ID, curCat.Name)
 
 	}
 	return nil
 }
 
+// drawExpansions creates the expansions view, which displays all of the expansions
+// in the currently selected category.
 func drawExpansions(menu *ggMenu) error {
 
 	// Find minY, which will be the bottom of the header view.
@@ -139,20 +135,24 @@ func drawExpansions(menu *ggMenu) error {
 		fmt.Fprintln(expHead, "Expansions")
 	}
 
-	// Create the expansions view, which will list the expansions within the currently selected category.
+	// Create the expansions view, listing the expansions within the currently selected category.
 	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, (menu.maxX/6)*5, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		// Get the expansions from the database and set the currently
+		// Selected expansion will be highlighted in Cyan.
+		expView.SelBgColor = gocui.ColorCyan
+		expView.Highlight = true
+
+		// Read the expansions from the database and set the currently
 		// selected expansion to the first item in the list.
-		exps := ggdb.ReadExpansionsInCategory(menu.cat)
+		exps := ggdb.ReadExpansions(menu.cat)
 		menu.exp = exps[0]
 
 		// Print the expansions to the view.
 		for _, exp := range exps {
-			expName := padText(exp.Name, menu.maxX)
+			expName := padText(exp.Name, menu.maxX/6*4)
 			fmt.Fprintln(expView, expName)
 		}
 	}
@@ -160,18 +160,23 @@ func drawExpansions(menu *ggMenu) error {
 	return nil
 }
 
+// drawPhrases creates the phrases view, which displays all of the phrases
+// mapped to the currently selected expansion.
 func drawPhrases(menu *ggMenu) error {
 
+	// Find minY, which is the bottom of the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Find minX, which is the right side of the expansions view.
 	_, _, minX, _, err := menu.gooey.ViewPosition("expansions")
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Create a view for the phrases header.
 	if phraseHead, err := menu.gooey.SetView("phraseHead", minX, minY, menu.maxX, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -179,14 +184,25 @@ func drawPhrases(menu *ggMenu) error {
 		fmt.Fprintln(phraseHead, "Phrases")
 	}
 
-	//
+	// Create the phrases view, listing the phrases mapped to the currently selected expansion.
 	if phraseView, err := menu.gooey.SetView("phrases", minX, minY+2, menu.maxX, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
+		// Selected phrase will be highlighted in Cyan.
 		phraseView.SelBgColor = gocui.ColorCyan
 		phraseView.Highlight = true
+
+		// Read the phrases from the database and set the currently selected
+		// phrase to the first item in the list.
+		phrases := ggdb.ReadPhrases(menu.exp)
+		menu.phrase = phrases[0]
+
+		for _, phrase := range phrases {
+			phraseText := padText(phrase.Phrase, menu.maxX/6)
+			fmt.Fprintln(phraseView, phraseText)
+		}
 
 	}
 
@@ -213,6 +229,14 @@ func runMenu(gooey *gocui.Gui) error {
 	drawCategories(&menu)
 	drawExpansions(&menu)
 	drawPhrases(&menu)
+
+	// Something like this could be used in the keybindings:
+	// var curCat ggdb.Category
+	// for _, cat := range cats {
+	// 	if curCatName == cat.Name {
+	// 		curCat = cat
+	// 	}
+	// }
 
 	return nil
 }

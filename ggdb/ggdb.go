@@ -82,7 +82,7 @@ func CleanSlate() {
 	DROP TABLE IF EXISTS phrases;
 	CREATE TABLE categories (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL UNIQUE,
+		name TEXT NOT NULL UNIQUE
 	);
 	INSERT INTO categories (name) VALUES ("default");
 	CREATE TABLE expansions (
@@ -94,7 +94,7 @@ func CleanSlate() {
 		);
 	CREATE TABLE phrases (
 		exp_id INTEGER,
-		phrase TEXT PRIMARY KEY,
+		name TEXT PRIMARY KEY,
 		FOREIGN KEY (exp_id) REFERENCES expansions(id)
 	);
 
@@ -143,7 +143,7 @@ func AddPhrase(phrase *Phrase) {
 	defer db.Close()
 
 	// Insert the phrase.
-	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2);", phrase.Phrase, phrase.Expansion.ID)
+	_, err := db.Exec("INSERT INTO phrases (name, exp_id) VALUES ($1, $2);", phrase.Phrase, phrase.Expansion.ID)
 	if err != nil {
 		log.Fatal("Couldn't insert phrases:", err)
 	}
@@ -337,7 +337,7 @@ func ReadExpanders() []ggconf.Expander {
 	defer db.Close()
 
 	// Query the database for the expansions.
-	rows, err := db.Query("SELECT exp_id, phrase, expansion FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
+	rows, err := db.Query("SELECT exp_id, phrases.name, expansion FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
 	if err != nil {
 		log.Fatal(err)
 	}
