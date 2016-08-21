@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/leerumler/gengar/ggconf"
-
 	// Import the SQLite driver.
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/leerumler/gengar/ggconf"
 )
 
 // Phrase holds
@@ -81,10 +81,8 @@ func CleanSlate() {
 	DROP TABLE IF EXISTS expansions;
 	DROP TABLE IF EXISTS phrases;
 	CREATE TABLE categories (
-		cat_id INTEGER DEFAULT 1,
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
-		FOREIGN KEY (cat_id) REFERENCES id
 	);
 	INSERT INTO categories (name) VALUES ("default");
 	CREATE TABLE expansions (
@@ -109,29 +107,22 @@ func CleanSlate() {
 	}
 }
 
-// findExpansionID finds and returns the expansion ID from gengar's database.
-func findExpansionID(exp *Expansion) int {
+// AddCategory inserts a new Category into gengar's database.
+func AddCategory(cat *Category) {
 
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
 
-	// Check the expansion ID in the database.
-	var expID int
-	err := db.QueryRow("SELECT id FROM expansions WHERE name=$1;", exp.Name).Scan(&expID)
-	switch {
-	case err == sql.ErrNoRows:
-		log.Fatal("No matching expansions found.")
-	case err != nil:
-		log.Fatal(err)
+	// Insert the category.
+	_, err := db.Exec("INSERT INTO categories (name) VALUES ($1);", cat.Name)
+	if err != nil {
+		log.Fatal("Couldn't insert category:", err)
 	}
-
-	// Return the ID.
-	return expID
 }
 
-// InsertExpansion inserts an Expansion into gengar's database.
-func InsertExpansion(exp *Expansion) {
+// AddExpansion inserts a new Expansion into gengar's database.
+func AddExpansion(exp *Expansion) {
 
 	// Connect to the database.
 	db := connectGGDB()
@@ -141,24 +132,201 @@ func InsertExpansion(exp *Expansion) {
 	_, err := db.Exec("INSERT INTO expansions (name, expansion) VALUES ($1, $2);", exp.Name, exp.Expansion)
 	if err != nil {
 		log.Fatal("Couldn't Insert Expansions:", err)
-
 	}
 }
 
-// MapPhrase maps a phrase to an expansion in gengar's database.
-func MapPhrase(exp *Phrase) {
+// AddPhrase maps a phrase to an expansion in gengar's database.
+func AddPhrase(phrase *Phrase) {
 
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
 
-	// Insert the expansion.
-	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2);", exp.Phrase, exp.Expansion.ID)
+	// Insert the phrase.
+	_, err := db.Exec("INSERT INTO phrases (phrase, exp_id) VALUES ($1, $2);", phrase.Phrase, phrase.Expansion.ID)
 	if err != nil {
 		log.Fatal("Couldn't insert phrases:", err)
-
 	}
 }
+
+// ReadCategories reads the available categories from the database.
+func ReadCategories() []Category {
+
+	// Create an empty slice of Categories to fill.
+	var cats []Category
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Query the database for all available categories.
+	rows, err := db.Query("SELECT id, name FROM categories;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// Load the query's results in to new Categories and append them to the slice.
+	for rows.Next() {
+		var cat Category
+		err = rows.Scan(&cat.ID, &cat.Name)
+		cats = append(cats, cat)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Return the filled slice of Categories
+	return cats
+}
+
+// ReadExpansions finds all of the Expansions within a given category.
+func ReadExpansions(cat Category) []Expansion {
+
+	// Create an empty slice of Expansions to fill.
+	var exps []Expansion
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Query the database for Expansions matching the category's ID.
+	rows, err := db.Query("SELECT id, name, expansion FROM expansions WHERE cat_id=$1;", cat.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// Load the query's results in to new Expansions and append those to the slice.
+	for rows.Next() {
+		var exp Expansion
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
+		exps = append(exps, exp)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Return the populated slice of Expansions.
+	return exps
+}
+
+// ReadPhrases finds all of the Phrases mapped to a given Expansion.
+func ReadPhrases(exp Expansion) []Phrase {
+
+	// Create an empty slice of Phrases.
+	var phrases []Phrase
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Query the database for Phrases matching the expansion's ID.
+	rows, err := db.Query("SELECT name FROM phrases WHERE exp_ID=$1;", exp.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// Load the query's results in to the Phrase slice.
+	for rows.Next() {
+		var phrase Phrase
+		err = rows.Scan(&phrase.Phrase)
+		phrase.Expansion = exp
+		phrases = append(phrases, phrase)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Return the populated slice of phrases.
+	return phrases
+}
+
+// ReadAllExpansions reads all of the available expansions from the database.
+func ReadAllExpansions() []Expansion {
+
+	// Create an empty slice of Expansions to fill.
+	var exps []Expansion
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Query the database for all Expansions.
+	rows, err := db.Query("SELECT id, name, expansion FROM expansions;")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	// Load the query's results in to new Expansions and append those to the slice.
+	for rows.Next() {
+		var exp Expansion
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
+		exps = append(exps, exp)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return exps
+}
+
+// CreateTestDB creates a test database.
+func CreateTestDB() {
+
+	// Create some testing expansions.
+	var exps []Expansion
+	exps = append(exps, Expansion{Name: "Test 1", Expansion: "This is test 1!", ID: 1})
+	exps = append(exps, Expansion{Name: "Test 2", Expansion: "this is test 2?", ID: 2})
+	exps = append(exps, Expansion{Name: "Test 3", Expansion: "this is test 3!?@$", ID: 3})
+
+	var phrases []Phrase
+	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: exps[0]})
+	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: exps[1]})
+	phrases = append(phrases, Phrase{Phrase: "test3", Expansion: exps[2]})
+
+	// Wipe/create a blank gengar database.
+	CleanSlate()
+
+	// Insert each of our testing expansions.
+	for _, exp := range exps {
+		AddExpansion(&exp)
+	}
+	for _, phrase := range phrases {
+		AddPhrase(&phrase)
+	}
+}
+
+// findExpansionID finds and returns the expansion ID from gengar's database.
+// func findExpansionID(exp *Expansion) int {
+//
+// 	// Connect to the database.
+// 	db := connectGGDB()
+// 	defer db.Close()
+//
+// 	// Check the expansion ID in the database.
+// 	var expID int
+// 	err := db.QueryRow("SELECT id FROM expansions WHERE name=$1;", exp.Name).Scan(&expID)
+// 	switch {
+// 	case err == sql.ErrNoRows:
+// 		log.Fatal("No matching expansions found.")
+// 	case err != nil:
+// 		log.Fatal(err)
+// 	}
+//
+// 	// Return the ID.
+// 	return expID
+// }
 
 // ReadExpanders reads expansions from the database and returns a slice of ggconf.Expanders.
 func ReadExpanders() []ggconf.Expander {
@@ -189,88 +357,4 @@ func ReadExpanders() []ggconf.Expander {
 
 	// Return pointer to exps.
 	return exps
-}
-
-// ReadExpansionsInCategory does
-func ReadExpansionsInCategory(cat Category) []Expansion {
-	var exps []Expansion
-
-	db := connectGGDB()
-	defer db.Close()
-
-	rows, err := db.Query("SELECT id, name, expansion FROM expansions WHERE cat_id=$1;", cat.ID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
-		exps = append(exps, exp)
-	}
-
-	// Die on error.
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Return exps.
-	return exps
-
-}
-
-// ReadCategories does
-func ReadCategories() []Category {
-	var cats []Category
-
-	// Get pointer to database connection.
-	db := connectGGDB()
-	defer db.Close()
-
-	rows, err := db.Query("SELECT id, name FROM categories;")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var cat Category
-		err = rows.Scan(&cat.ID, &cat.Name)
-		cats = append(cats, cat)
-	}
-
-	// Die on error.
-	if err = rows.Err(); err != nil {
-		log.Fatal(err)
-	}
-
-	// Return cats.
-	return cats
-}
-
-// CreateTestDB creates a test database.
-func CreateTestDB() {
-
-	// Create some testing expansions.
-	var exps []Expansion
-	exps = append(exps, Expansion{Name: "Test 1", Expansion: "This is test 1!", ID: 1})
-	exps = append(exps, Expansion{Name: "Test 2", Expansion: "this is test 2?", ID: 2})
-	exps = append(exps, Expansion{Name: "Test 3", Expansion: "this is test 3!?@$", ID: 3})
-
-	var phrases []Phrase
-	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: exps[0]})
-	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: exps[1]})
-	phrases = append(phrases, Phrase{Phrase: "test3", Expansion: exps[2]})
-
-	// Wipe/create a blank gengar database.
-	CleanSlate()
-
-	// Insert each of our testing expansions.
-	for _, exp := range exps {
-		InsertExpansion(&exp)
-	}
-	for _, phrase := range phrases {
-		MapPhrase(&phrase)
-	}
 }
