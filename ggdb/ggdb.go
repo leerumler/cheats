@@ -10,19 +10,19 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Phrase holds
+// Phrase holds information about phrases.
 type Phrase struct {
 	Phrase    string
 	Expansion Expansion
 }
 
-// Expansion holds
+// Expansion holds information about expansions
 type Expansion struct {
 	Name, Expansion string
 	ID              int
 }
 
-// Category holds
+// Category holds information about categories.
 type Category struct {
 	ID   int
 	Name string
@@ -282,6 +282,7 @@ func ReadAllExpansions() []Expansion {
 		log.Fatal(err)
 	}
 
+	// Return the populated slice of expansions.
 	return exps
 }
 
@@ -295,9 +296,16 @@ func ReadAllPhrases() []Phrase {
 	db := connectGGDB()
 	defer db.Close()
 
-	//
-	// exps := ReadAllExpansions()
+	// Get all of the available expansions.
+	exps := ReadAllExpansions()
 
+	// For each of the expansions, read the phrases and append them to the slice.
+	for _, exp := range exps {
+		newPhrases := ReadPhrases(exp)
+		phrases = append(phrases, newPhrases...)
+	}
+
+	// Return the populated slice of phrases.
 	return phrases
 }
 
@@ -310,6 +318,7 @@ func CreateTestDB() {
 	exps = append(exps, Expansion{Name: "Test 2", Expansion: "this is test 2?", ID: 2})
 	exps = append(exps, Expansion{Name: "Test 3", Expansion: "this is test 3!?@$", ID: 3})
 
+	// Create some test phrases.
 	var phrases []Phrase
 	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: exps[0]})
 	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: exps[1]})
@@ -318,7 +327,7 @@ func CreateTestDB() {
 	// Wipe/create a blank gengar database.
 	CleanSlate()
 
-	// Insert each of our testing expansions.
+	// Insert each of our testing expansions and phrases.
 	for _, exp := range exps {
 		AddExpansion(&exp)
 	}
@@ -327,7 +336,7 @@ func CreateTestDB() {
 	}
 }
 
-// ReadExpanders reads expansions from the database and returns a slice of ggconf.Expanders.
+// ReadExpanders reads expansions from the database and returns a slice of Expanders.
 func ReadExpanders() []Expander {
 	var exps []Expander
 

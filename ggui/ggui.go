@@ -199,6 +199,7 @@ func drawPhrases(menu *ggMenu) error {
 		phrases := ggdb.ReadPhrases(menu.exp)
 		menu.phrase = phrases[0]
 
+		// Print the phrases to the view.
 		for _, phrase := range phrases {
 			phraseText := padText(phrase.Phrase, menu.maxX/6)
 			fmt.Fprintln(phraseView, phraseText)
@@ -221,10 +222,12 @@ func readSel(curView *gocui.View) string {
 
 func runMenu(gooey *gocui.Gui) error {
 
+	// Create a ggMenu variable and populate it with some basic info.
 	var menu ggMenu
 	menu.gooey = gooey
 	menu.maxX, menu.maxY = menu.gooey.Size()
 
+	// Draw the views in the menu.
 	drawHeader(&menu)
 	drawCategories(&menu)
 	drawExpansions(&menu)
@@ -248,20 +251,22 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 // GengarMenu creates an example GUI.
 func GengarMenu() {
 
-	// readExpanders()
-
+	// Create a new gocui.Gui object.
 	gooey := gocui.NewGui()
 	if err := gooey.Init(); err != nil {
 		log.Fatal(err)
 	}
 	defer gooey.Close()
 
+	// Set the layout handler.
 	gooey.SetLayout(runMenu)
 
+	// Make Ctrl+C quit the menu.
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
 
+	// Start the main loop.
 	if err := gooey.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
