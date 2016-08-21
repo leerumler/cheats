@@ -24,7 +24,7 @@ type comm struct {
 
 // parseMatch checks if there is a match for the input and returns either
 // an empty string for no match or the expansion for a match.
-func parseMatch(input string, exps []ggconf.Expander) string {
+func parseMatch(input string, exps []ggdb.Expander) string {
 	var expansion string
 	for _, exp := range exps {
 		if comp := strings.Compare(input, exp.Phrase); comp == 0 {

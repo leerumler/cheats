@@ -8,8 +8,6 @@ import (
 
 	// Import the SQLite driver.
 	_ "github.com/mattn/go-sqlite3"
-
-	"github.com/leerumler/gengar/ggconf"
 )
 
 // Phrase holds
@@ -28,6 +26,12 @@ type Expansion struct {
 type Category struct {
 	ID   int
 	Name string
+}
+
+// Expander defines a struct that holds text epansion information.
+type Expander struct {
+	Phrase, Expansion string
+	ID                int
 }
 
 // GGDB holds a connection to gengar's database.
@@ -281,6 +285,22 @@ func ReadAllExpansions() []Expansion {
 	return exps
 }
 
+// ReadAllPhrases reads all of the available phrases from the database.
+func ReadAllPhrases() []Phrase {
+
+	// Create an empty slice of Phrases to fill.
+	var phrases []Phrase
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	//
+	// exps := ReadAllExpansions()
+
+	return phrases
+}
+
 // CreateTestDB creates a test database.
 func CreateTestDB() {
 
@@ -307,30 +327,9 @@ func CreateTestDB() {
 	}
 }
 
-// findExpansionID finds and returns the expansion ID from gengar's database.
-// func findExpansionID(exp *Expansion) int {
-//
-// 	// Connect to the database.
-// 	db := connectGGDB()
-// 	defer db.Close()
-//
-// 	// Check the expansion ID in the database.
-// 	var expID int
-// 	err := db.QueryRow("SELECT id FROM expansions WHERE name=$1;", exp.Name).Scan(&expID)
-// 	switch {
-// 	case err == sql.ErrNoRows:
-// 		log.Fatal("No matching expansions found.")
-// 	case err != nil:
-// 		log.Fatal(err)
-// 	}
-//
-// 	// Return the ID.
-// 	return expID
-// }
-
 // ReadExpanders reads expansions from the database and returns a slice of ggconf.Expanders.
-func ReadExpanders() []ggconf.Expander {
-	var exps []ggconf.Expander
+func ReadExpanders() []Expander {
+	var exps []Expander
 
 	// Get pointer to database connection.
 	db := connectGGDB()
@@ -345,7 +344,7 @@ func ReadExpanders() []ggconf.Expander {
 
 	// Read through the results and populate exps with returned info.
 	for rows.Next() {
-		var exp ggconf.Expander
+		var exp Expander
 		err = rows.Scan(&exp.ID, &exp.Phrase, &exp.Expansion)
 		exps = append(exps, exp)
 	}
