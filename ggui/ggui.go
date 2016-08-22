@@ -280,20 +280,6 @@ func drawHelp(menu *ggMenu) error {
 //
 func drawText(menu *ggMenu) error {
 
-	// // Find minY, which will be the bottom of the expansions view.
-	// _, _, _, minY, err := menu.gooey.ViewPosition("expansions")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// // Create a view for the expansions text header.
-	// if expTextHead, err := menu.gooey.SetView("expTextHead", 0, minY, menu.maxX-1, minY+2); err != nil {
-	// 	if err != gocui.ErrUnknownView {
-	// 		return err
-	// 	}
-	// 	fmt.Fprintln(expTextHead, "Expansions Text")
-	// }
-
 	// Find minY, which will be the bottom of the expansions view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("help")
 	if err != nil {
@@ -318,18 +304,9 @@ func drawText(menu *ggMenu) error {
 
 func upText(gooey *gocui.Gui) error {
 
-	//
-	var cat ggdb.Category
-	if catView, err := gooey.View("categories"); err == nil {
-		cats := ggdb.ReadCategories()
-		cat = *readCat(catView, cats)
-	} else {
-		return nil
-	}
-
 	var exp ggdb.Expansion
 	if expView, err := gooey.View("expansions"); err == nil {
-		exps := ggdb.ReadExpansions(&cat)
+		exps := ggdb.ReadAllExpansions()
 		exp = *readExp(expView, exps)
 	} else {
 		return nil

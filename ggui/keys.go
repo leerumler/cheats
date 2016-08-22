@@ -217,6 +217,21 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+func saveText(gooey *gocui.Gui, view *gocui.View) error {
+
+	// var exp ggdb.Expansion
+	// if expView, err := gooey.View("expansions"); err == nil {
+	// 	exps := ggdb.ReadAllExpansions()
+	// 	exp = *readExp(expView, exps)
+	// } else {
+	// 	return err
+	// }
+
+	// Read text and save.
+
+	return nil
+}
+
 // setKeyBinds is a necessary evil.
 func setKeyBinds(gooey *gocui.Gui) error {
 

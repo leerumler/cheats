@@ -90,10 +90,10 @@ func CleanSlate() {
 	);
 	INSERT INTO categories (name) VALUES ("default");
 	CREATE TABLE expansions (
-		cat_id INTEGER DEFAULT 1,
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
 		expansion TEXT NOT NULL UNIQUE,
+		cat_id INTEGER DEFAULT 1,
 		FOREIGN KEY (cat_id) REFERENCES categories(id)
 		);
 	CREATE TABLE phrases (
@@ -133,8 +133,7 @@ func AddExpansion(exp *Expansion) {
 	defer db.Close()
 
 	// Insert the expansion.
-	_, err := db.Exec("INSERT INTO expansions (name, expansion) VALUES ($1, $2);", exp.Name, exp.Expansion)
-	if err != nil {
+	if _, err := db.Exec("INSERT INTO expansions (name, expansion, cat_id) VALUES ($1, $2, $3);", exp.Name, exp.Expansion, exp.CatID); err != nil {
 		log.Fatal("Couldn't Insert Expansions:", err)
 	}
 }
@@ -197,7 +196,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	defer db.Close()
 
 	// Query the database for Expansions matching the category's ID.
-	rows, err := db.Query("SELECT id, name, expansion FROM expansions WHERE cat_id=$1;", cat.ID)
+	rows, err := db.Query("SELECT id, name, expansion, cat_id FROM expansions WHERE cat_id=$1;", cat.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -206,7 +205,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	// Load the query's results in to new Expansions and append those to the slice.
 	for rows.Next() {
 		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion, &exp.CatID)
 		exps = append(exps, exp)
 	}
 
@@ -264,7 +263,7 @@ func ReadAllExpansions() []Expansion {
 	defer db.Close()
 
 	// Query the database for all Expansions.
-	rows, err := db.Query("SELECT id, name, expansion FROM expansions;")
+	rows, err := db.Query("SELECT id, name, expansion, cat_id FROM expansions;")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -273,7 +272,7 @@ func ReadAllExpansions() []Expansion {
 	// Load the query's results in to new Expansions and append those to the slice.
 	for rows.Next() {
 		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion)
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion, &exp.CatID)
 		exps = append(exps, exp)
 	}
 
