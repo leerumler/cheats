@@ -20,29 +20,35 @@ type ggMenu struct {
 // centerText takes a string of text and a length and pads the beginning
 // of the string with spaces to center that text in the available space.
 func centerText(text string, maxX int) string {
+
 	numSpaces := maxX/2 - len(text)/2
 	for i := 0; i < numSpaces; i++ {
 		text = " " + text
 	}
+
 	return text
 }
 
 // padText takes a string of text and pads the end of it with spaces to
 // fill the available space in a cell.
 func padText(text string, maxX int) string {
+
 	numSpaces := maxX - len(text)
 	for i := 0; i < numSpaces; i++ {
 		text = text + " "
 	}
+
 	return text
 }
 
 // readSel reads the currently selected line and returns a string
 // containing its contents, without trailing spaces.
 func readSel(curView *gocui.View) string {
+
 	_, posY := curView.Cursor()
 	selection, _ := curView.Line(posY)
 	selection = strings.TrimSpace(selection)
+
 	return selection
 }
 
@@ -65,7 +71,7 @@ func readCat(catView *gocui.View, cats []ggdb.Category) *ggdb.Category {
 }
 
 // readExp reads the currently selected expansion name and matches it to a ggdb.Expansion.
-func readExp(expView *gocui.View, exps []ggdb.Expansion, cat *ggdb.Category) *ggdb.Expansion {
+func readExp(expView *gocui.View, exps []ggdb.Expansion) *ggdb.Expansion {
 
 	// Read the name of the currently selected expansion.
 	curExpName := readSel(expView)
@@ -84,44 +90,51 @@ func readExp(expView *gocui.View, exps []ggdb.Expansion, cat *ggdb.Category) *gg
 
 // selUp moves the cursor/selection up one line.
 func selUp(gooey *gocui.Gui, view *gocui.View) error {
+
 	if view != nil {
 		view.MoveCursor(0, -1, false)
 	}
+
 	return nil
 }
 
-// selDown moves the selected menu item down one line, without
-// moving past the last line.
+// selDown moves the selected menu item down one line, without moving past the last line.
 func selDown(gooey *gocui.Gui, view *gocui.View) error {
+
 	if view != nil {
 		view.MoveCursor(0, 1, false)
 
-		// If the cursor moves to an empty line, move it back.
+		// If the cursor moves to an empty line, move it back. :P
 		if readSel(view) == "" {
 			view.MoveCursor(0, -1, false)
 		}
 	}
+
 	return nil
 }
 
 // resetHighlights changes the SelBgColor of the categories, expansions,
-// and phrases views back to their default blue.
+// and phrases views back to their "default" blue.
 func resetHighlights(gooey *gocui.Gui) error {
+
 	if catView, err := gooey.View("categories"); err == nil {
 		catView.SelBgColor = gocui.ColorBlue
 	} else {
 		return err
 	}
+
 	if expView, err := gooey.View("expansions"); err == nil {
 		expView.SelBgColor = gocui.ColorBlue
 	} else {
 		return err
 	}
+
 	if phraseView, err := gooey.View("phrases"); err == nil {
 		phraseView.SelBgColor = gocui.ColorBlue
 	} else {
 		return err
 	}
+
 	return nil
 }
 
@@ -133,14 +146,16 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 		log.Fatal(err)
 	}
 
-	// Reset every view's highlight colors back to blue, and
+	// Reset every view's highlight colors back to blue, then set the
 	// set the categories view's highlight color to cyan.
+	// So everyone's blue but categories.
 	resetHighlights(gooey)
 	if catView, err := gooey.View("categories"); err == nil {
 		catView.SelBgColor = gocui.ColorCyan
 	} else {
 		log.Fatal(err)
 	}
+
 	return nil
 }
 
@@ -149,17 +164,19 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 
 	// Focus on the epxansions view.
 	if err := gooey.SetCurrentView("expansions"); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	// Reset every view's highlight colors back to blue, and
-	// set the expansions view's highlight color to cyan.
+	// Reset every view's highlight colors back to blue, then set the
+	// expansions view's highlight color to cyan.
+	// So everyone's blue but expansions.
 	resetHighlights(gooey)
 	if expView, err := gooey.View("expansions"); err == nil {
 		expView.SelBgColor = gocui.ColorCyan
 	} else {
-		log.Fatal(err)
+		return err
 	}
+
 	return nil
 }
 
@@ -172,59 +189,78 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 		log.Fatal(err)
 	}
 
-	// Reset every view's highlight colors back to blue, and
+	// Reset every view's highlight colors back to blue, then set the
 	// set the phrases view's highlight color to cyan.
+	// So everyone's blue but phrases.
 	resetHighlights(gooey)
 	if phraseView, err := gooey.View("phrases"); err == nil {
 		phraseView.SelBgColor = gocui.ColorCyan
 	} else {
 		log.Fatal(err)
 	}
+
 	return nil
 }
 
+// setKeyBinds is a necessary evil.
 func setKeyBinds(gooey *gocui.Gui) error {
 
+	// Always have an exit strategy.
+	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		log.Panicln(err)
+	}
+
+	// If the categories view is focused and ↑ is pressed, move the selected menu item up one.
 	if err := gooey.SetKeybinding("categories", gocui.KeyArrowUp, gocui.ModNone, selUp); err != nil {
 		return err
 	}
 
+	// If the categories view is focused and ↓ is pressed, move the selected menu item down one.
 	if err := gooey.SetKeybinding("categories", gocui.KeyArrowDown, gocui.ModNone, selDown); err != nil {
 		return err
 	}
 
+	// If the categories view is focused and → is pressed, move the focus to the expansions view.
 	if err := gooey.SetKeybinding("categories", gocui.KeyArrowRight, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
 
+	// If the categories view is focused and Enter is pressed, move the focus to the expansions view.
 	if err := gooey.SetKeybinding("categories", gocui.KeyEnter, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
 
+	// If the expansions view is focused and ↑ is pressed, move the selected menu item up one.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowUp, gocui.ModNone, selUp); err != nil {
 		return err
 	}
 
+	// If the expansions view is focused and ↓ is pressed, move the selected menu item down one.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowDown, gocui.ModNone, selDown); err != nil {
 		return err
 	}
 
+	// If the expansions view is focused and ← is pressed, move the focus to the categories menu.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowLeft, gocui.ModNone, focusCat); err != nil {
 		return err
 	}
 
+	// If the expansions view is focused and → is pressed, move the focus to the phrases view.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowRight, gocui.ModNone, focusPhrase); err != nil {
 		return err
 	}
 
+	// If the phrases view is focused and ↑ is pressed, move the selected menu item up one.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowUp, gocui.ModNone, selUp); err != nil {
 		return err
 	}
 
+	// If the phrases view is focused and ↓ is pressed, move the selected menu item down one.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowDown, gocui.ModNone, selDown); err != nil {
 		return err
 	}
 
+	// If the phrases view is focused and ← is pressed, move the focus to the expansions menu.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowLeft, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
@@ -279,7 +315,7 @@ func drawCategories(menu *ggMenu) error {
 		catView.Highlight = true
 	}
 
-	//
+	// Redraw the categories menu on the categories view.
 	if catView, err := menu.gooey.View("categories"); err == nil {
 
 		// Clear the internal buffer, since this allows us to check
@@ -289,21 +325,18 @@ func drawCategories(menu *ggMenu) error {
 		// Read the categories from the database.
 		cats := ggdb.ReadCategories()
 
-		// Print each of the categories to a row in the menu.
+		// Print the name of each category in rows on the menu.
 		for _, cat := range cats {
 			category := padText(cat.Name, menu.maxX/6)
 			fmt.Fprintln(catView, category)
 		}
 
-		// Check the currently selected row and
+		// Check the currently selected row and store its matching category.
 		menu.cat = readCat(catView, cats)
 
 	} else {
 		log.Fatal(err)
 	}
-
-	// menu.cat = readCat(catView, cats)
-	// fmt.Fprintln(catView, menu.cat.Name)
 
 	return nil
 }
@@ -332,35 +365,37 @@ func drawExpansions(menu *ggMenu) error {
 		fmt.Fprintln(expHead, "Expansions")
 	}
 
-	// Create the expansions view, listing the expansions within the currently selected category.
+	// Create the expansion view, if it doesn't already exist.
 	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, (menu.maxX/6)*5, menu.maxY-3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		// Selected expansion will be highlighted in Blue.
+		// The currently selected expansion will default to Blue.
 		expView.SelBgColor = gocui.ColorBlue
 		expView.Highlight = true
-
 	}
 
+	// Redraw the expansions menu on the expansions view.
 	if expView, err := menu.gooey.View("expansions"); err == nil {
 
+		// Clear the internal buffer.
 		expView.Clear()
 
 		// Read the expansions from the database.
 		exps := ggdb.ReadExpansions(menu.cat)
 
-		// Print the expansions to the view.
+		// Print name of each expansion to the view.
 		for _, exp := range exps {
 			expName := padText(exp.Name, menu.maxX/6*4)
 			fmt.Fprintln(expView, expName)
 		}
 
-		menu.exp = readExp(expView, exps, menu.cat)
+		// Check the currently selected row and store its matching expansion.
+		menu.exp = readExp(expView, exps)
 
 	} else {
-		log.Fatal(err)
+		return err
 	}
 
 	return nil
@@ -370,7 +405,8 @@ func drawExpansions(menu *ggMenu) error {
 // mapped to the currently selected expansion.
 func drawPhrases(menu *ggMenu) error {
 
-	// Find minY, which is the bottom of the header view.
+	// Find the lowest coordinate of the header view, which will serve as
+	// the top coordinate on the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
 		log.Fatal(err)
@@ -382,7 +418,7 @@ func drawPhrases(menu *ggMenu) error {
 		log.Fatal(err)
 	}
 
-	// Create a view for the phrases header.
+	// Create a view for the phrases header and print the title.
 	if phraseHead, err := menu.gooey.SetView("phraseHead", minX, minY, menu.maxX-1, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -390,7 +426,7 @@ func drawPhrases(menu *ggMenu) error {
 		fmt.Fprintln(phraseHead, "Phrases")
 	}
 
-	// Create the phrases view, listing the phrases mapped to the currently selected expansion.
+	// Create the phrases view, listing the phrases that are mapped to the currently selected expansion.
 	if phraseView, err := menu.gooey.SetView("phrases", minX, minY+2, menu.maxX-1, menu.maxY-3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
@@ -399,38 +435,39 @@ func drawPhrases(menu *ggMenu) error {
 		// Selected phrase will be highlighted in Blue.
 		phraseView.SelBgColor = gocui.ColorBlue
 		phraseView.Highlight = true
-
 	}
+
+	// Draw the phrase menu on to the phrase view.
 	if phraseView, err := menu.gooey.View("phrases"); err == nil {
 
+		// Empty the phrase view of all contents.
 		phraseView.Clear()
 
-		// Read the phrases from the database and set the currently selected
-		// phrase to the first item in the list.
+		// Read the phrases from the database.
 		phrases := ggdb.ReadPhrases(menu.exp)
-		// menu.phrase = phrases[0]
 
-		// Print the phrases to the view.
+		// Print each of the phrases to the view.
 		for _, phrase := range phrases {
 			phraseText := padText(phrase.Phrase, menu.maxX/6)
 			fmt.Fprintln(phraseView, phraseText)
 		}
 
 	} else {
-		log.Fatal(err)
+		return err
 	}
 
 	return nil
-
 }
 
 func drawHelp(menu *ggMenu) error {
+
 	if help, err := menu.gooey.SetView("help", 0, menu.maxY-3, menu.maxX-1, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 		fmt.Fprintln(help, "Help text goes here")
 	}
+
 	return nil
 }
 
@@ -442,20 +479,30 @@ func runMenu(gooey *gocui.Gui) error {
 	menu.maxX, menu.maxY = menu.gooey.Size()
 
 	// Draw the views in the menu.
-	drawHeader(&menu)
-	drawCategories(&menu)
-	drawExpansions(&menu)
-	drawPhrases(&menu)
+	if err := drawHeader(&menu); err != nil {
+		log.Panicln(err)
+	}
+	if err := drawCategories(&menu); err != nil {
+		log.Panicln(err)
+	}
+	if err := drawExpansions(&menu); err != nil {
+		log.Panicln(err)
+	}
+	if err := drawPhrases(&menu); err != nil {
+		log.Panicln(err)
+	}
 
-	// If the current view isn't set, set it to categories.  Also set the
-	// highlight color to Cyan.
+	// If the current view isn't set, set it to categories.
 	if gooey.CurrentView() == nil {
 		if err := gooey.SetCurrentView("categories"); err != nil {
 			log.Fatal(err)
 		}
 	}
 
-	drawHelp(&menu)
+	// And finally, draw the help menu.
+	if err := drawHelp(&menu); err != nil {
+		log.Panicln(err)
+	}
 
 	return nil
 }
@@ -467,27 +514,22 @@ func quit(g *gocui.Gui, v *gocui.View) error {
 // GengarMenu creates an example GUI.
 func GengarMenu() {
 
-	// Create a new gocui.Gui object.
+	//
 	gooey := gocui.NewGui()
 	if err := gooey.Init(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer gooey.Close()
 
 	// Set the layout handler.
 	gooey.SetLayout(runMenu)
 
-	// Make Ctrl+C quit the menu.
-	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+	//
+	if err := setKeyBinds(gooey); err != nil {
 		log.Panicln(err)
 	}
 
-	err := setKeyBinds(gooey)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Start the main loop.
+	// Start the main event loop.
 	if err := gooey.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
