@@ -10,22 +10,11 @@ import (
 )
 
 type ggMenu struct {
-	cat        ggdb.Category
-	exp        ggdb.Expansion
+	cat        *ggdb.Category
+	exp        *ggdb.Expansion
 	phrase     ggdb.Phrase
 	gooey      *gocui.Gui
 	maxX, maxY int
-}
-
-// getGooey returns a new GUI struct.
-func getGooey() {
-
-	// Create a new GUI.
-	gooey := gocui.NewGui()
-	if err := gooey.Init(); err != nil {
-		log.Fatal(err)
-	}
-	defer gooey.Close()
 }
 
 // centerText takes a string of text and a length and pads the beginning
@@ -58,7 +47,7 @@ func readSel(curView *gocui.View) string {
 }
 
 // readCat reads the currently selected category name and matches it to a ggdb.Category.
-func readCat(catView *gocui.View, cats []ggdb.Category) ggdb.Category {
+func readCat(catView *gocui.View, cats []ggdb.Category) *ggdb.Category {
 
 	// Read the name of the currently selected category.
 	curCatName := readSel(catView)
@@ -72,11 +61,11 @@ func readCat(catView *gocui.View, cats []ggdb.Category) ggdb.Category {
 	}
 
 	// And return it.
-	return curCat
+	return &curCat
 }
 
 // readExp reads the currently selected expansion name and matches it to a ggdb.Expansion.
-func readExp(expView *gocui.View, exps []ggdb.Expansion, cat ggdb.Category) ggdb.Expansion {
+func readExp(expView *gocui.View, exps []ggdb.Expansion, cat *ggdb.Category) *ggdb.Expansion {
 
 	// Read the name of the currently selected expansion.
 	curExpName := readSel(expView)
@@ -90,7 +79,7 @@ func readExp(expView *gocui.View, exps []ggdb.Expansion, cat ggdb.Category) ggdb
 	}
 
 	// And return it.
-	return curExp
+	return &curExp
 }
 
 // selUp moves the cursor/selection up one line.
@@ -101,12 +90,13 @@ func selUp(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
-// selDown moves the cursor/selection down one line.  If this causes
-// the selected text to be empty, it will then move the cursor back.
-// The pinnacle of efficiency.
+// selDown moves the selected menu item down one line, without
+// moving past the last line.
 func selDown(gooey *gocui.Gui, view *gocui.View) error {
 	if view != nil {
 		view.MoveCursor(0, 1, false)
+
+		// If the cursor moves to an empty line, move it back.
 		if readSel(view) == "" {
 			view.MoveCursor(0, -1, false)
 		}
@@ -245,13 +235,13 @@ func setKeyBinds(gooey *gocui.Gui) error {
 // drawHeader adds the "Gengar Configuration Editor" header to the top of the menu.
 func drawHeader(menu *ggMenu) error {
 
-	// The header will be dynamically placed at the top of the menu and will extend down two pixels.
+	// Place the header view at the top of the menu and extend it down two pixels.
 	if header, err := menu.gooey.SetView("header", 0, 0, menu.maxX-1, 2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		// The text will be centered at the top of the menu.
+		// Center the header text and print it to the view.
 		head := centerText("Gengar Configuration Editor", menu.maxX)
 		fmt.Fprintln(header, head)
 	}
@@ -260,7 +250,7 @@ func drawHeader(menu *ggMenu) error {
 
 }
 
-// drawCategories creates the categories view, which displays all available categories.
+// drawCategories draws the categories menu, which displays all available categories.
 func drawCategories(menu *ggMenu) error {
 
 	// Find minY, which will be the bottom of the header view.
@@ -277,13 +267,14 @@ func drawCategories(menu *ggMenu) error {
 		fmt.Fprintln(catHead, "Categories")
 	}
 
-	// Create a view for the categories.
+	// Create a view for the categories if it doesn't already exist.
 	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY-3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		// Selected category will be highlighted in Cyan.
+		// Since the categories view will default to being
+		// the default view, it defaults to cyan.
 		catView.SelBgColor = gocui.ColorCyan
 		catView.Highlight = true
 	}
@@ -291,17 +282,20 @@ func drawCategories(menu *ggMenu) error {
 	//
 	if catView, err := menu.gooey.View("categories"); err == nil {
 
+		// Clear the internal buffer, since this allows us to check
+		// for more categories every time the function is executed.
 		catView.Clear()
 
 		// Read the categories from the database.
 		cats := ggdb.ReadCategories()
 
-		// Print each of the categories to the view.
+		// Print each of the categories to a row in the menu.
 		for _, cat := range cats {
 			category := padText(cat.Name, menu.maxX/6)
 			fmt.Fprintln(catView, category)
 		}
 
+		// Check the currently selected row and
 		menu.cat = readCat(catView, cats)
 
 	} else {

@@ -13,7 +13,7 @@ import (
 // Phrase holds information about phrases.
 type Phrase struct {
 	Phrase    string
-	Expansion Expansion
+	Expansion *Expansion
 }
 
 // Expansion holds information about expansions
@@ -187,7 +187,7 @@ func ReadCategories() []Category {
 }
 
 // ReadExpansions finds all of the Expansions within a given category.
-func ReadExpansions(cat Category) []Expansion {
+func ReadExpansions(cat *Category) []Expansion {
 
 	// Create an empty slice of Expansions to fill.
 	var exps []Expansion
@@ -220,7 +220,7 @@ func ReadExpansions(cat Category) []Expansion {
 }
 
 // ReadPhrases finds all of the Phrases mapped to a given Expansion.
-func ReadPhrases(exp Expansion) []Phrase {
+func ReadPhrases(exp *Expansion) []Phrase {
 
 	// Create an empty slice of Phrases.
 	var phrases []Phrase
@@ -301,7 +301,7 @@ func ReadAllPhrases() []Phrase {
 
 	// For each of the expansions, read the phrases and append them to the slice.
 	for _, exp := range exps {
-		newPhrases := ReadPhrases(exp)
+		newPhrases := ReadPhrases(&exp)
 		phrases = append(phrases, newPhrases...)
 	}
 
@@ -320,9 +320,9 @@ func CreateTestDB() {
 
 	// Create some test phrases.
 	var phrases []Phrase
-	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: exps[0]})
-	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: exps[1]})
-	phrases = append(phrases, Phrase{Phrase: "test3", Expansion: exps[2]})
+	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: &exps[0]})
+	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: &exps[1]})
+	phrases = append(phrases, Phrase{Phrase: "test3", Expansion: &exps[2]})
 
 	// Wipe/create a blank gengar database.
 	CleanSlate()
