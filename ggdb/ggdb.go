@@ -89,6 +89,11 @@ func CleanSlate() {
 		name TEXT NOT NULL UNIQUE
 	);
 	INSERT INTO categories (name) VALUES ("default");
+	INSERT INTO categories (name) VALUES ("test1");
+	INSERT INTO categories (name) VALUES ("test2");
+	INSERT INTO categories (name) VALUES ("test3");
+	INSERT INTO categories (name) VALUES ("test4");
+	INSERT INTO categories (name) VALUES ("test5");
 	CREATE TABLE expansions (
 		cat_id INTEGER DEFAULT 1,
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
