@@ -14,11 +14,11 @@ func main() {
 	ggdb.CreateTestDB()
 
 	//
-	menu := flag.Bool("config", false, "Open gengar's configuration menu.")
+	listen := flag.Bool("listen", false, "Tell gengar to start listening.")
 	flag.Parse()
 
 	//
-	if !*menu {
+	if *listen {
 
 		// Start gengar.
 		gengar.ListenClosely()

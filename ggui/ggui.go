@@ -76,7 +76,7 @@ func drawCategories(menu *ggMenu) error {
 	}
 
 	// Create a view for the categories if it doesn't already exist.
-	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY-3); err != nil {
+	if catView, err := menu.gooey.SetView("categories", 0, minY+2, menu.maxX/6, menu.maxY*2/3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -130,7 +130,7 @@ func drawExpansions(menu *ggMenu) error {
 	}
 
 	// Create a view for the expansions header.
-	if expHead, err := menu.gooey.SetView("expHead", minX, minY, (menu.maxX/6)*5, minY+2); err != nil {
+	if expHead, err := menu.gooey.SetView("expHead", minX, minY, menu.maxX*5/6, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -138,7 +138,7 @@ func drawExpansions(menu *ggMenu) error {
 	}
 
 	// Create the expansion view, if it doesn't already exist.
-	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, (menu.maxX/6)*5, menu.maxY-3); err != nil {
+	if expView, err := menu.gooey.SetView("expansions", minX, minY+2, menu.maxX*5/6, menu.maxY*2/3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -159,7 +159,7 @@ func drawExpansions(menu *ggMenu) error {
 
 		// Print name of each expansion to the view.
 		for _, exp := range exps {
-			expName := padText(exp.Name, menu.maxX/6*4)
+			expName := padText(exp.Name, menu.maxX*4/6)
 			fmt.Fprintln(expView, expName)
 		}
 
@@ -199,7 +199,7 @@ func drawPhrases(menu *ggMenu) error {
 	}
 
 	// Create the phrases view, listing the phrases that are mapped to the currently selected expansion.
-	if phraseView, err := menu.gooey.SetView("phrases", minX, minY+2, menu.maxX-1, menu.maxY-3); err != nil {
+	if phraseView, err := menu.gooey.SetView("phrases", minX, minY+2, menu.maxX-1, menu.maxY*2/3); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -233,8 +233,14 @@ func drawPhrases(menu *ggMenu) error {
 
 func drawHelp(menu *ggMenu) error {
 
+	// Find minY, which will be the bottom of the expansions view.
+	_, _, _, minY, err := menu.gooey.ViewPosition("expansions")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Create a view to hold the help menu.
-	if _, err := menu.gooey.SetView("help", 0, menu.maxY-3, menu.maxX-1, menu.maxY-1); err != nil {
+	if _, err := menu.gooey.SetView("help", 0, minY, menu.maxX-1, minY+2); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
@@ -246,23 +252,92 @@ func drawHelp(menu *ggMenu) error {
 		// Check if the current view is set.
 		if curView := menu.gooey.CurrentView(); curView != nil {
 
-			//
 			// var helpText string
 			help.Clear()
-			helpText := "up: ↑ | down: ↓ | left: ← | right: → | new: n | e: edit"
+			helpText := "up: ↑ | down: ↓ | left: ← | right: → | "
 
 			switch curView.Name() {
 			case "categories":
-				// helpText += " | category"
+				helpText += "new: n | edit: e"
 			case "expansions":
-				helpText += " | u: update"
+				helpText += "new: n | edit: e"
 			case "phrases":
-				// helpText += " | phrases"
+				helpText += "new: n | edit: e"
+			case "text":
+				helpText += "quit: ctrl+x | save: ctrl+s | reload: ctrl+r"
 			}
 			helpText = centerText(helpText, menu.maxX)
 			fmt.Fprintln(help, helpText)
 		}
 
+	} else {
+		return err
+	}
+
+	return nil
+}
+
+//
+func drawText(menu *ggMenu) error {
+
+	// // Find minY, which will be the bottom of the expansions view.
+	// _, _, _, minY, err := menu.gooey.ViewPosition("expansions")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// // Create a view for the expansions text header.
+	// if expTextHead, err := menu.gooey.SetView("expTextHead", 0, minY, menu.maxX-1, minY+2); err != nil {
+	// 	if err != gocui.ErrUnknownView {
+	// 		return err
+	// 	}
+	// 	fmt.Fprintln(expTextHead, "Expansions Text")
+	// }
+
+	// Find minY, which will be the bottom of the expansions view.
+	_, _, _, minY, err := menu.gooey.ViewPosition("help")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the expansion text view, if it doesn't already exist.
+	if textView, err := menu.gooey.SetView("text", 0, minY, menu.maxX-1, menu.maxY-1); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		//
+		textView.Editable = true
+		textView.Wrap = true
+		// textView.Clear()
+		// fmt.Fprintln(textView, menu.exp.Expansion)
+	}
+
+	return nil
+}
+
+func upText(gooey *gocui.Gui) error {
+
+	//
+	var cat ggdb.Category
+	if catView, err := gooey.View("categories"); err == nil {
+		cats := ggdb.ReadCategories()
+		cat = *readCat(catView, cats)
+	} else {
+		return nil
+	}
+
+	var exp ggdb.Expansion
+	if expView, err := gooey.View("expansions"); err == nil {
+		exps := ggdb.ReadExpansions(&cat)
+		exp = *readExp(expView, exps)
+	} else {
+		return nil
+	}
+
+	if textView, err := gooey.View("text"); err == nil {
+		textView.Clear()
+		fmt.Fprintln(textView, exp.Expansion)
 	} else {
 		return err
 	}
@@ -293,10 +368,16 @@ func runMenu(gooey *gocui.Gui) error {
 	if err := drawHelp(&menu); err != nil {
 		return err
 	}
+	if err := drawText(&menu); err != nil {
+		return err
+	}
 
 	// If the current view isn't set, set it to categories.
 	if gooey.CurrentView() == nil {
 		if err := gooey.SetCurrentView("categories"); err != nil {
+			return err
+		}
+		if err := upText(menu.gooey); err != nil {
 			return err
 		}
 	}

@@ -9,10 +9,10 @@ import (
 
 // readSel reads the currently selected line and returns a string
 // containing its contents, without trailing spaces.
-func readSel(curView *gocui.View) string {
+func readSel(view *gocui.View) string {
 
-	_, posY := curView.Cursor()
-	selection, _ := curView.Line(posY)
+	_, posY := view.Cursor()
+	selection, _ := view.Line(posY)
 	selection = strings.TrimSpace(selection)
 
 	return selection
@@ -61,6 +61,8 @@ func selUp(gooey *gocui.Gui, view *gocui.View) error {
 		view.MoveCursor(0, -1, false)
 	}
 
+	upText(gooey)
+
 	return nil
 }
 
@@ -75,6 +77,8 @@ func selDown(gooey *gocui.Gui, view *gocui.View) error {
 			view.MoveCursor(0, -1, false)
 		}
 	}
+
+	upText(gooey)
 
 	return nil
 }
@@ -122,11 +126,15 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	upText(gooey)
+
 	return nil
 }
 
 // focusExp changes the focus to the expansions view.
 func focusExp(gooey *gocui.Gui, view *gocui.View) error {
+
+	gooey.Cursor = false
 
 	// Focus on the epxansions view.
 	if err := gooey.SetCurrentView("expansions"); err != nil {
@@ -142,6 +150,8 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 	} else {
 		return err
 	}
+
+	upText(gooey)
 
 	return nil
 }
@@ -168,6 +178,45 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+// textEditor is used as the default gocui editor.
+func textEditor(view *gocui.View, key gocui.Key, char rune, mod gocui.Modifier) {
+	switch {
+	case char != 0 && mod == 0:
+		view.EditWrite(char)
+	case key == gocui.KeySpace:
+		view.EditWrite(' ')
+	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
+		view.EditDelete(true)
+	case key == gocui.KeyDelete:
+		view.EditDelete(false)
+	case key == gocui.KeyInsert:
+		view.Overwrite = !view.Overwrite
+	case key == gocui.KeyEnter:
+		view.EditNewLine()
+	case key == gocui.KeyArrowDown:
+		view.MoveCursor(0, 1, false)
+	case key == gocui.KeyArrowUp:
+		view.MoveCursor(0, -1, false)
+	case key == gocui.KeyArrowLeft:
+		view.MoveCursor(-1, 0, false)
+	case key == gocui.KeyArrowRight:
+		view.MoveCursor(1, 0, false)
+	}
+}
+
+func focusText(gooey *gocui.Gui, view *gocui.View) error {
+
+	// Focus on the text view.
+	if err := gooey.SetCurrentView("text"); err != nil {
+		return err
+	}
+
+	gooey.Editor = gocui.EditorFunc(textEditor)
+	gooey.Cursor = true
+
+	return nil
+}
+
 // setKeyBinds is a necessary evil.
 func setKeyBinds(gooey *gocui.Gui) error {
 
@@ -181,12 +230,12 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
-	// If the categories view is focused and → is pressed, move the focus to the expansions view.
+	// If the categories view is focused and → is pressed, move focus to the expansions view.
 	if err := gooey.SetKeybinding("categories", gocui.KeyArrowRight, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
 
-	// If the categories view is focused and Enter is pressed, move the focus to the expansions view.
+	// If the categories view is focused and Enter is pressed, move focus to the expansions view.
 	if err := gooey.SetKeybinding("categories", gocui.KeyEnter, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
@@ -201,13 +250,18 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
-	// If the expansions view is focused and ← is pressed, move the focus to the categories menu.
+	// If the expansions view is focused and ← is pressed, move focus to the categories menu.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowLeft, gocui.ModNone, focusCat); err != nil {
 		return err
 	}
 
-	// If the expansions view is focused and → is pressed, move the focus to the phrases view.
+	// If the expansions view is focused and → is pressed, move focus to the phrases view.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyArrowRight, gocui.ModNone, focusPhrase); err != nil {
+		return err
+	}
+
+	// If the expansions view is focused and Enter is pressed, move focus to the phrases view.
+	if err := gooey.SetKeybinding("expansions", gocui.KeyEnter, gocui.ModNone, focusText); err != nil {
 		return err
 	}
 
@@ -221,8 +275,13 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
-	// If the phrases view is focused and ← is pressed, move the focus to the expansions menu.
+	// If the phrases view is focused and ← is pressed, move focus to the expansions menu.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowLeft, gocui.ModNone, focusExp); err != nil {
+		return err
+	}
+
+	// If the text view is focused and Escape is pressed, move focus to the expansions menu.
+	if err := gooey.SetKeybinding("text", gocui.KeyCtrlX, gocui.ModNone, focusExp); err != nil {
 		return err
 	}
 
