@@ -61,6 +61,7 @@ func selUp(gooey *gocui.Gui, view *gocui.View) error {
 		view.MoveCursor(0, -1, false)
 	}
 
+	//
 	upText(gooey)
 
 	return nil
@@ -126,6 +127,7 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Refresh text view.
 	upText(gooey)
 
 	return nil
@@ -151,6 +153,7 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Refresh text view.
 	upText(gooey)
 
 	return nil
@@ -219,9 +222,17 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 
 func saveText(gooey *gocui.Gui, view *gocui.View) error {
 
+	// var cat ggdb.Category
+	// if catView, err := gooey.View("categories"); err == nil {
+	// 	cats := ggdb.ReadCategories()
+	// 	cat = *readCat(catView, cats)
+	// } else {
+	// 	return err
+	// }
+	//
 	// var exp ggdb.Expansion
 	// if expView, err := gooey.View("expansions"); err == nil {
-	// 	exps := ggdb.ReadAllExpansions()
+	// 	exps := ggdb.ReadExpansions(&cat)
 	// 	exp = *readExp(expView, exps)
 	// } else {
 	// 	return err
