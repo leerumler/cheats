@@ -12,21 +12,26 @@ func main() {
 
 	//
 	listen := flag.Bool("run", false, "Tell gengar to start listening.")
+	reset := flag.Bool("reset", false, "Reset Gengar's database. This will wipe out everything.")
 	flag.Parse()
 
 	//
-	if *listen {
-
-		// Populate a test database.
-		ggdb.CreateTestDB()
+	switch {
+	case *listen:
 
 		// Start gengar.
 		gengar.ListenClosely()
 
-	} else {
+	case *reset:
+
+		// Reset the test database.
+		ggdb.CreateTestDB()
+
+	default:
 
 		// Open gengar's configuration menu.
 		ggui.GengarMenu()
+
 	}
 }
 
