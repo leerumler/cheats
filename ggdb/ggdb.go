@@ -18,8 +18,8 @@ type Phrase struct {
 
 // Expansion holds information about expansions
 type Expansion struct {
-	Name, Expansion string
-	ID, CatID       int
+	Name, Text string
+	ID, CatID  int
 }
 
 // Category holds information about categories.
@@ -92,7 +92,7 @@ func CleanSlate() {
 	CREATE TABLE expansions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
-		expansion TEXT NOT NULL UNIQUE,
+		text TEXT NOT NULL UNIQUE,
 		cat_id INTEGER DEFAULT 1,
 		FOREIGN KEY (cat_id) REFERENCES categories(id)
 	);
@@ -121,7 +121,7 @@ func AddCategory(cat *Category) {
 	// Insert the category.
 	_, err := db.Exec("INSERT INTO categories (name) VALUES ($1);", cat.Name)
 	if err != nil {
-		log.Fatal("Couldn't insert category: ", err)
+		log.Panicln("Couldn't insert category: ", err)
 	}
 }
 
@@ -133,8 +133,8 @@ func AddExpansion(exp *Expansion) {
 	defer db.Close()
 
 	// Insert the expansion.
-	if _, err := db.Exec("INSERT INTO expansions (name, expansion, cat_id) VALUES ($1, $2, $3);", exp.Name, exp.Expansion, exp.CatID); err != nil {
-		log.Fatal("Couldn't insert expansion: ", err)
+	if _, err := db.Exec("INSERT INTO expansions (name, text, cat_id) VALUES ($1, $2, $3);", exp.Name, exp.Text, exp.CatID); err != nil {
+		log.Panicln("Couldn't insert expansion: ", err)
 	}
 }
 
@@ -148,7 +148,20 @@ func AddPhrase(phrase *Phrase) {
 	// Insert the phrase.
 	_, err := db.Exec("INSERT INTO phrases (name, exp_id) VALUES ($1, $2);", phrase.Phrase, phrase.Expansion.ID)
 	if err != nil {
-		log.Fatal("Couldn't insert phrase: ", err)
+		log.Panicln("Couldn't insert phrase: ", err)
+	}
+}
+
+// UpdateExpansion do
+func UpdateExpansion(exp *Expansion) {
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Insert the expansion.
+	if _, err := db.Exec("UPDATE expansions SET text = $1 WHERE id = $2;", exp.Text, exp.ID); err != nil {
+		log.Panicln("Couldn't insert expansion: ", err)
 	}
 }
 
@@ -196,7 +209,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	defer db.Close()
 
 	// Query the database for Expansions matching the category's ID.
-	rows, err := db.Query("SELECT id, name, expansion, cat_id FROM expansions WHERE cat_id=$1;", cat.ID)
+	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions WHERE cat_id=$1;", cat.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,7 +218,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	// Load the query's results in to new Expansions and append those to the slice.
 	for rows.Next() {
 		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion, &exp.CatID)
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Text, &exp.CatID)
 		exps = append(exps, exp)
 	}
 
@@ -263,7 +276,7 @@ func ReadAllExpansions() []Expansion {
 	defer db.Close()
 
 	// Query the database for all Expansions.
-	rows, err := db.Query("SELECT id, name, expansion, cat_id FROM expansions;")
+	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions;")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -272,7 +285,7 @@ func ReadAllExpansions() []Expansion {
 	// Load the query's results in to new Expansions and append those to the slice.
 	for rows.Next() {
 		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Expansion, &exp.CatID)
+		err = rows.Scan(&exp.ID, &exp.Name, &exp.Text, &exp.CatID)
 		exps = append(exps, exp)
 	}
 
@@ -313,9 +326,9 @@ func CreateTestDB() {
 
 	// Create some testing expansions.
 	var exps []Expansion
-	exps = append(exps, Expansion{Name: "Test 1", Expansion: "This is test 1!", ID: 1, CatID: 1})
-	exps = append(exps, Expansion{Name: "Test 2", Expansion: "this is test 2?", ID: 2, CatID: 1})
-	exps = append(exps, Expansion{Name: "Test 3", Expansion: "this is test 3!?@$", ID: 3, CatID: 1})
+	exps = append(exps, Expansion{Name: "Test 1", Text: "This is test 1!", ID: 1, CatID: 1})
+	exps = append(exps, Expansion{Name: "Test 2", Text: "this is test 2?", ID: 2, CatID: 1})
+	exps = append(exps, Expansion{Name: "Test 3", Text: "this is test 3!?@$", ID: 3, CatID: 1})
 
 	// Create some test phrases.
 	var phrases []Phrase
@@ -344,7 +357,7 @@ func ReadExpanders() []Expander {
 	defer db.Close()
 
 	// Query the database for the expansions.
-	rows, err := db.Query("SELECT phrases.name, expansion FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
+	rows, err := db.Query("SELECT phrases.name, text FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
 	if err != nil {
 		log.Fatal(err)
 	}

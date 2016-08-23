@@ -181,32 +181,6 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
-// textEditor is used as the default gocui editor.
-func textEditor(view *gocui.View, key gocui.Key, char rune, mod gocui.Modifier) {
-	switch {
-	case char != 0 && mod == 0:
-		view.EditWrite(char)
-	case key == gocui.KeySpace:
-		view.EditWrite(' ')
-	case key == gocui.KeyBackspace || key == gocui.KeyBackspace2:
-		view.EditDelete(true)
-	case key == gocui.KeyDelete:
-		view.EditDelete(false)
-	case key == gocui.KeyInsert:
-		view.Overwrite = !view.Overwrite
-	case key == gocui.KeyEnter:
-		view.EditNewLine()
-	case key == gocui.KeyArrowDown:
-		view.MoveCursor(0, 1, false)
-	case key == gocui.KeyArrowUp:
-		view.MoveCursor(0, -1, false)
-	case key == gocui.KeyArrowLeft:
-		view.MoveCursor(-1, 0, false)
-	case key == gocui.KeyArrowRight:
-		view.MoveCursor(1, 0, false)
-	}
-}
-
 func focusText(gooey *gocui.Gui, view *gocui.View) error {
 
 	// Focus on the text view.
@@ -214,31 +188,41 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Set the editor function to textEditor
 	gooey.Editor = gocui.EditorFunc(textEditor)
 	gooey.Cursor = true
 
 	return nil
 }
 
-func saveText(gooey *gocui.Gui, view *gocui.View) error {
+func saveText(gooey *gocui.Gui, textView *gocui.View) error {
 
-	// var cat ggdb.Category
-	// if catView, err := gooey.View("categories"); err == nil {
-	// 	cats := ggdb.ReadCategories()
-	// 	cat = *readCat(catView, cats)
-	// } else {
-	// 	return err
-	// }
-	//
-	// var exp ggdb.Expansion
-	// if expView, err := gooey.View("expansions"); err == nil {
-	// 	exps := ggdb.ReadExpansions(&cat)
-	// 	exp = *readExp(expView, exps)
-	// } else {
-	// 	return err
-	// }
+	// Check the currently selected category.
+	var cat ggdb.Category
+	if catView, err := gooey.View("categories"); err == nil {
+		cats := ggdb.ReadCategories()
+		cat = *readCat(catView, cats)
+	} else {
+		return err
+	}
 
-	// Read text and save.
+	// Check the currently selected expansion.
+	var exp ggdb.Expansion
+	expView, err := gooey.View("expansions")
+	if err == nil {
+		exps := ggdb.ReadExpansions(&cat)
+		exp = *readExp(expView, exps)
+	} else {
+		return err
+	}
+
+	// // Update exp.Text to the text in the view.
+	exp.Text = strings.TrimSpace(textView.ViewBuffer())
+
+	// Update the database and point focus
+	// back on the expansions view.
+	ggdb.UpdateExpansion(&exp)
+	focusExp(gooey, expView)
 
 	return nil
 }
@@ -308,6 +292,11 @@ func setKeyBinds(gooey *gocui.Gui) error {
 
 	// If the text view is focused and Escape is pressed, move focus to the expansions menu.
 	if err := gooey.SetKeybinding("text", gocui.KeyCtrlX, gocui.ModNone, focusExp); err != nil {
+		return err
+	}
+
+	// If the text view is focused and Escape is pressed, move focus to the expansions menu.
+	if err := gooey.SetKeybinding("text", gocui.KeyCtrlS, gocui.ModNone, saveText); err != nil {
 		return err
 	}
 

@@ -258,9 +258,9 @@ func drawHelp(menu *ggMenu) error {
 
 			switch curView.Name() {
 			case "categories":
-				helpText += "new: n | edit: e"
+				helpText += "new: n | edit: e | select: ⏎"
 			case "expansions":
-				helpText += "new: n | edit: e"
+				helpText += "new: n | edit: e | select: ⏎"
 			case "phrases":
 				helpText += "new: n | edit: e"
 			case "text":
@@ -295,8 +295,7 @@ func drawText(menu *ggMenu) error {
 		//
 		textView.Editable = true
 		textView.Wrap = true
-		// textView.Clear()
-		// fmt.Fprintln(textView, menu.exp.Expansion)
+
 	}
 
 	return nil
@@ -314,7 +313,7 @@ func upText(gooey *gocui.Gui) error {
 
 	if textView, err := gooey.View("text"); err == nil {
 		textView.Clear()
-		fmt.Fprintln(textView, exp.Expansion)
+		fmt.Fprintln(textView, exp.Text)
 	} else {
 		return err
 	}

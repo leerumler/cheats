@@ -10,15 +10,15 @@ import (
 
 func main() {
 
-	// Populate a test database.
-	ggdb.CreateTestDB()
-
 	//
-	listen := flag.Bool("listen", false, "Tell gengar to start listening.")
+	listen := flag.Bool("run", false, "Tell gengar to start listening.")
 	flag.Parse()
 
 	//
 	if *listen {
+
+		// Populate a test database.
+		ggdb.CreateTestDB()
 
 		// Start gengar.
 		gengar.ListenClosely()
