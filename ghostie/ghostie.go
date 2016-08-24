@@ -37,9 +37,10 @@ func SendKeys(xinfo Xinfos, expansion string) {
 			}
 		}
 
-		for _, keycode := range keycodes {
+		// for _, keycode := range keycodes {
+		if len(keycodes) != 0 {
 			key := nilKey
-			key.Detail = keycode
+			key.Detail = keycodes[0]
 			key.Root = *xinfo.Root
 			key.Event = *xinfo.Active
 			if needShift {
