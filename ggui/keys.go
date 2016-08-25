@@ -12,53 +12,6 @@ func nothing(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
-// readSel reads the currently selected line and returns a string
-// containing its contents, without trailing spaces.
-func readSel(view *gocui.View) string {
-
-	_, posY := view.Cursor()
-	selection, _ := view.Line(posY)
-	selection = strings.TrimSpace(selection)
-
-	return selection
-}
-
-// readCat reads the currently selected category name and matches it to a ggdb.Category.
-func readCat(catView *gocui.View, cats []ggdb.Category) *ggdb.Category {
-
-	// Read the name of the currently selected category.
-	curCatName := readSel(catView)
-
-	// Search for a category that matches that name.
-	var curCat ggdb.Category
-	for _, cat := range cats {
-		if curCatName == cat.Name {
-			curCat = cat
-		}
-	}
-
-	// And return it.
-	return &curCat
-}
-
-// readExp reads the currently selected expansion name and matches it to a ggdb.Expansion.
-func readExp(expView *gocui.View, exps []ggdb.Expansion) *ggdb.Expansion {
-
-	// Read the name of the currently selected expansion.
-	curExpName := readSel(expView)
-
-	// Search for an expansion that matches that name.
-	var curExp ggdb.Expansion
-	for _, exp := range exps {
-		if curExpName == exp.Name {
-			curExp = exp
-		}
-	}
-
-	// And return it.
-	return &curExp
-}
-
 // selUp moves the cursor/selection up one line.
 func selUp(gooey *gocui.Gui, view *gocui.View) error {
 
@@ -72,7 +25,7 @@ func selUp(gooey *gocui.Gui, view *gocui.View) error {
 	}
 
 	// Refresh text view.
-	upText(gooey)
+	upText()
 
 	return nil
 }
@@ -95,7 +48,7 @@ func selDown(gooey *gocui.Gui, view *gocui.View) error {
 	}
 
 	// Refresh text view.
-	upText(gooey)
+	upText()
 
 	return nil
 }
@@ -146,7 +99,7 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 	}
 
 	// Refresh text view.
-	upText(gooey)
+	upText()
 
 	return nil
 }
@@ -172,7 +125,7 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 	}
 
 	// Refresh text view.
-	upText(gooey)
+	upText()
 
 	return nil
 }
@@ -208,7 +161,7 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	// Set the editor function to textEditor and enable
+	// Set the editor function to textEditor and enable the cursor.
 	gooey.Editor = gocui.EditorFunc(multiLineEditor)
 	gooey.Cursor = true
 
@@ -221,28 +174,30 @@ func saveText(gooey *gocui.Gui, textView *gocui.View) error {
 	menu.exp.Text = strings.TrimSpace(textView.ViewBuffer())
 
 	// Update the database with the new value.
-	ggdb.UpdateExpansion(menu.exp)
+	ggdb.UpdateExpansionText(menu.exp)
+
+	if err := upText(); err != nil {
+		return err
+	}
 
 	// Change focus to the expansions view.
-	// if expView, err := gooey.View("expansions"); err == nil {
 	if err := focusExp(gooey, nil); err != nil {
 		return err
 	}
-	// } else {
-	// return err
-	// }
 
 	return nil
 }
 
-func closePrompt(gooey *gocui.Gui, promptView *gocui.View) error {
-	gooey.DeleteView("promptHead")
-	gooey.DeleteView("prompt")
+func closePrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	if _, err := gooey.SetViewOnTop("expansions"); err != nil {
+		return nil
+	}
 	return nil
 }
 
-func closeCatPrompt(gooey *gocui.Gui, promptView *gocui.View) error {
-	if err := closePrompt(gooey, promptView); err != nil {
+func closeCatPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+	if err := closePrompt(gooey, nil); err != nil {
 		return err
 	}
 	if err := focusCat(gooey, nil); err != nil {
@@ -251,11 +206,11 @@ func closeCatPrompt(gooey *gocui.Gui, promptView *gocui.View) error {
 	return nil
 }
 
-func saveNewCat(gooey *gocui.Gui, promptView *gocui.View) error {
+func newCat(gooey *gocui.Gui, promptView *gocui.View) error {
 
-	var newCat ggdb.Category
-	newCat.Name = strings.TrimSpace(promptView.ViewBuffer())
-	ggdb.AddCategory(&newCat)
+	var cat ggdb.Category
+	cat.Name = strings.TrimSpace(promptView.ViewBuffer())
+	ggdb.AddCategory(&cat)
 
 	if err := closeCatPrompt(gooey, promptView); err != nil {
 		return err
@@ -264,20 +219,49 @@ func saveNewCat(gooey *gocui.Gui, promptView *gocui.View) error {
 	return nil
 }
 
-func newCatPrompt(gooey *gocui.Gui, view *gocui.View) error {
+func upCat(gooey *gocui.Gui, promptView *gocui.View) error {
 
-	title := "New Category Name:"
-	promptInput(&title, nil)
+	menu.cat.Name = strings.TrimSpace(promptView.ViewBuffer())
+	ggdb.UpdateCategory(menu.cat)
 
-	if err := gooey.SetKeybinding("prompt", gocui.KeyCtrlS, gocui.ModNone, saveNewCat); err != nil {
+	if err := closeCatPrompt(gooey, promptView); err != nil {
 		return err
 	}
 
-	if err := gooey.SetKeybinding("prompt", gocui.KeyEnter, gocui.ModNone, saveNewCat); err != nil {
+	return nil
+}
+
+func closeExpPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+	if err := closePrompt(gooey, nil); err != nil {
+		return err
+	}
+	if err := focusExp(gooey, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	var exp ggdb.Expansion
+
+	exp.Name = strings.TrimSpace(prompt.ViewBuffer())
+	exp.CatID = menu.cat.ID
+	ggdb.AddExpansion(&exp)
+
+	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err
 	}
 
-	if err := menu.gooey.SetKeybinding("prompt", gocui.KeyCtrlX, gocui.ModNone, closeCatPrompt); err != nil {
+	return nil
+}
+
+func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	menu.exp.Name = strings.TrimSpace(prompt.ViewBuffer())
+	ggdb.UpdateExpansionName(menu.exp)
+
+	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err
 	}
 
@@ -304,6 +288,11 @@ func setKeyBinds(gooey *gocui.Gui) error {
 
 	// If the categories view is focused and ctrl+n is pressed, add a new category.
 	if err := gooey.SetKeybinding("categories", gocui.KeyCtrlN, gocui.ModNone, newCatPrompt); err != nil {
+		return err
+	}
+
+	// If the categories view is focused and ctrl+e is pressed, edit the current category.
+	if err := gooey.SetKeybinding("categories", gocui.KeyCtrlE, gocui.ModNone, upCatPrompt); err != nil {
 		return err
 	}
 
@@ -334,6 +323,16 @@ func setKeyBinds(gooey *gocui.Gui) error {
 
 	// If the expansions view is focused and Enter is pressed, move focus to the phrases view.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyEnter, gocui.ModNone, focusText); err != nil {
+		return err
+	}
+
+	// If the expansions view is focused and ctrl+n is pressed, add a new expansion.
+	if err := gooey.SetKeybinding("expansions", gocui.KeyCtrlN, gocui.ModNone, newExpPrompt); err != nil {
+		return err
+	}
+
+	// If the expansions view is focused and ctrl+e is pressed, edit the current category.
+	if err := gooey.SetKeybinding("expansions", gocui.KeyCtrlE, gocui.ModNone, upExpPrompt); err != nil {
 		return err
 	}
 

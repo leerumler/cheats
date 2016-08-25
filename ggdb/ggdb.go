@@ -12,8 +12,8 @@ import (
 
 // Phrase holds information about phrases.
 type Phrase struct {
-	Phrase    string
-	Expansion *Expansion
+	Name  string
+	ExpID int
 }
 
 // Expansion holds information about expansions
@@ -91,7 +91,7 @@ func CleanSlate() {
 	INSERT INTO categories (name) VALUES ("default");
 	CREATE TABLE expansions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL UNIQUE,
+		name TEXT NOT NULL,
 		text TEXT UNIQUE,
 		cat_id INTEGER DEFAULT 1,
 		FOREIGN KEY (cat_id) REFERENCES categories(id)
@@ -133,7 +133,7 @@ func AddExpansion(exp *Expansion) {
 	defer db.Close()
 
 	// Insert the expansion.
-	if _, err := db.Exec("INSERT INTO expansions (name, text, cat_id) VALUES ($1, $2, $3);", exp.Name, exp.Text, exp.CatID); err != nil {
+	if _, err := db.Exec("INSERT INTO expansions (name, cat_id) VALUES ($1, $2);", exp.Name, exp.CatID); err != nil {
 		log.Panicln("Couldn't insert expansion: ", err)
 	}
 }
@@ -146,14 +146,40 @@ func AddPhrase(phrase *Phrase) {
 	defer db.Close()
 
 	// Insert the phrase.
-	_, err := db.Exec("INSERT INTO phrases (name, exp_id) VALUES ($1, $2);", phrase.Phrase, phrase.Expansion.ID)
+	_, err := db.Exec("INSERT INTO phrases (name, exp_id) VALUES ($1, $2);", phrase.Name, phrase.ExpID)
 	if err != nil {
 		log.Panicln("Couldn't insert phrase: ", err)
 	}
 }
 
-// UpdateExpansion do
-func UpdateExpansion(exp *Expansion) {
+// UpdateCategory updates a category's name.
+func UpdateCategory(cat *Category) {
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Update the category's name
+	if _, err := db.Exec("UPDATE categories SET name = $1 WHERE id = $2;", cat.Name, cat.ID); err != nil {
+		log.Panicln("Couldn't update expansion: ", err)
+	}
+}
+
+// UpdateExpansionName updates an expansion's name.
+func UpdateExpansionName(exp *Expansion) {
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Insert the expansion.
+	if _, err := db.Exec("UPDATE expansions SET name = $1 WHERE id = $2;", exp.Name, exp.ID); err != nil {
+		log.Panicln("Couldn't update expansion: ", err)
+	}
+}
+
+// UpdateExpansionText updates an expansion's text.
+func UpdateExpansionText(exp *Expansion) {
 
 	// Connect to the database.
 	db := connectGGDB()
@@ -251,8 +277,8 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	// Load the query's results in to the Phrase slice.
 	for rows.Next() {
 		var phrase Phrase
-		err = rows.Scan(&phrase.Phrase)
-		phrase.Expansion = exp
+		err = rows.Scan(&phrase.Name)
+		phrase.ExpID = exp.ID
 		phrases = append(phrases, phrase)
 	}
 
@@ -332,9 +358,9 @@ func CreateTestDB() {
 
 	// Create some test phrases.
 	var phrases []Phrase
-	phrases = append(phrases, Phrase{Phrase: "test1", Expansion: &exps[0]})
-	phrases = append(phrases, Phrase{Phrase: "test2", Expansion: &exps[1]})
-	phrases = append(phrases, Phrase{Phrase: "test3", Expansion: &exps[2]})
+	phrases = append(phrases, Phrase{Name: "test1", ExpID: 1})
+	phrases = append(phrases, Phrase{Name: "test2", ExpID: 2})
+	phrases = append(phrases, Phrase{Name: "test3", ExpID: 3})
 
 	// Wipe/create a blank gengar database.
 	CleanSlate()
@@ -342,6 +368,9 @@ func CreateTestDB() {
 	// Insert each of our testing expansions and phrases.
 	for _, exp := range exps {
 		AddExpansion(&exp)
+	}
+	for _, exp := range exps {
+		UpdateExpansionText(&exp)
 	}
 	for _, phrase := range phrases {
 		AddPhrase(&phrase)

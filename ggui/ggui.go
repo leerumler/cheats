@@ -3,6 +3,7 @@ package ggui
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jroimartin/gocui"
 	"github.com/leerumler/gengar/ggdb"
@@ -11,12 +12,20 @@ import (
 type ggMenu struct {
 	cat        *ggdb.Category
 	exp        *ggdb.Expansion
-	phrase     ggdb.Phrase
+	phrase     *ggdb.Phrase
+	cats       []ggdb.Category
+	exps       []ggdb.Expansion
+	phrases    []ggdb.Phrase
 	gooey      *gocui.Gui
 	maxX, maxY int
 }
 
 var menu ggMenu
+
+// quit quits the main event loop.
+func quit(g *gocui.Gui, v *gocui.View) error {
+	return gocui.ErrQuit
+}
 
 // centerText takes a string of text and a length and pads the beginning
 // of the string with spaces to center that text in the available space.
@@ -42,68 +51,85 @@ func padText(text *string, maxX int) *string {
 	return text
 }
 
-func popUp(message *string) error {
+// readSel reads the currently selected line and returns a string
+// containing its contents, without trailing spaces.
+func readSel(view *gocui.View) string {
 
-	minX := menu.maxX * 1 / 4
-	maxX := menu.maxX * 3 / 4
-	minY := menu.maxY/2 - 1
-	maxY := menu.maxY/2 + 1
+	_, posY := view.Cursor()
+	selection, _ := view.Line(posY)
+	selection = strings.TrimSpace(selection)
 
-	if popUp, err := menu.gooey.SetView("popUp", minX, minY, maxX, maxY); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
-		}
-
-		fmt.Fprintln(popUp, *centerText(message, maxX-minX))
-	}
-
-	return nil
+	return selection
 }
 
-func promptInput(title *string, prev *string) error {
+// readCat reads the currently selected category name and matches it to a ggdb.Category.
+func readCat() *ggdb.Category {
 
-	//
-	minX := menu.maxX * 1 / 4
-	maxX := menu.maxX * 3 / 4
-	midY := menu.maxY / 2
+	var curCat ggdb.Category
 
-	if promptHead, err := menu.gooey.SetView("promptHead", minX, midY-2, maxX, midY); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
+	catView, err := menu.gooey.View("categories")
+	if err != nil {
+		return &curCat
+	}
+
+	// Read the name of the currently selected category.
+	curCatName := readSel(catView)
+
+	// Search for a category that matches that name.
+	for _, cat := range menu.cats {
+		if curCatName == cat.Name {
+			curCat = cat
 		}
-
-		fmt.Fprintln(promptHead, *centerText(title, menu.maxX/2))
 	}
 
-	if prompt, err := menu.gooey.SetView("prompt", minX, midY, maxX, midY+2); err != nil {
-		if err != gocui.ErrUnknownView {
-			return err
+	// And return it.
+	return &curCat
+}
+
+// readExp reads the currently selected expansion name and matches it to a ggdb.Expansion.
+func readExp() *ggdb.Expansion {
+
+	var curExp ggdb.Expansion
+	expView, err := menu.gooey.View("expansions")
+	if err != nil {
+		return &curExp
+	}
+
+	// Read the name of the currently selected expansion.
+	curExpName := readSel(expView)
+
+	// Search for an expansion that matches that name.
+	for _, exp := range menu.exps {
+		if curExpName == exp.Name {
+			curExp = exp
 		}
-
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
-		menu.gooey.Cursor = true
-		prompt.Editable = true
-
 	}
 
-	// Focus on the prompt view.
-	if err := menu.gooey.SetCurrentView("prompt"); err != nil {
-		return err
+	// And return it.
+	return &curExp
+}
+
+// readPhrase reads the currently selected phrase name and matches it to a ggdb.Phrase.
+func readPhrase() *ggdb.Phrase {
+
+	var curPhrase ggdb.Phrase
+	phraseView, err := menu.gooey.View("phrases")
+	if err != nil {
+		return &curPhrase
 	}
 
-	if prompt, err := menu.gooey.View("prompt"); err == nil {
+	// Read the name of the currently selected phrase.
+	curPhraseName := readSel(phraseView)
 
-		prompt.Clear()
-
-		if prev != nil {
-			fmt.Fprintln(prompt, *prev)
+	// Search for a phrase that matches that name.
+	for _, phrase := range menu.phrases {
+		if curPhraseName == phrase.Name {
+			curPhrase = phrase
 		}
-
-	} else {
-		return err
 	}
 
-	return nil
+	// And return it.
+	return &curPhrase
 }
 
 // drawHeader adds the "Gengar Configuration Editor" header to the top of the menu.
@@ -161,15 +187,15 @@ func drawCategories() error {
 		catView.Clear()
 
 		// Read the categories from the database.
-		cats := ggdb.ReadCategories()
+		menu.cats = ggdb.ReadCategories()
 
 		// Print the name of each category in rows on the menu.
-		for _, cat := range cats {
+		for _, cat := range menu.cats {
 			fmt.Fprintln(catView, *padText(&cat.Name, menu.maxX/6))
 		}
 
 		// Check the currently selected row and store its matching category.
-		menu.cat = readCat(catView, cats)
+		menu.cat = readCat()
 
 	} else {
 		return err
@@ -220,15 +246,15 @@ func drawExpansions() error {
 		expView.Clear()
 
 		// Read the expansions from the database.
-		exps := ggdb.ReadExpansions(menu.cat)
+		menu.exps = ggdb.ReadExpansions(menu.cat)
 
 		// Print name of each expansion to the view.
-		for _, exp := range exps {
+		for _, exp := range menu.exps {
 			fmt.Fprintln(expView, *padText(&exp.Name, menu.maxX*4/6))
 		}
 
 		// Check the currently selected row and store its matching expansion.
-		menu.exp = readExp(expView, exps)
+		menu.exp = readExp()
 
 	} else {
 		return err
@@ -280,11 +306,11 @@ func drawPhrases() error {
 		phraseView.Clear()
 
 		// Read the phrases from the database.
-		phrases := ggdb.ReadPhrases(menu.exp)
+		menu.phrases = ggdb.ReadPhrases(menu.exp)
 
 		// Print each of the phrases to the view.
-		for _, phrase := range phrases {
-			fmt.Fprintln(phraseView, *padText(&phrase.Phrase, menu.maxX/6))
+		for _, phrase := range menu.phrases {
+			fmt.Fprintln(phraseView, *padText(&phrase.Name, menu.maxX/6))
 		}
 
 	} else {
@@ -328,7 +354,13 @@ func drawHelp() error {
 				helpText += "new: ctrl+n | edit: ctrl+e"
 			case "text":
 				helpText += "exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
-			case "prompt":
+			case "newCatPrompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
+			case "upCatPrompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
+			case "newExpPrompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
+			case "upExpPrompt":
 				helpText = "exit: ctrl+x | save: ctrl+s"
 			}
 			helpText = *centerText(&helpText, menu.maxX)
@@ -366,16 +398,12 @@ func drawText() error {
 	return nil
 }
 
-func upText(gooey *gocui.Gui) error {
+func upText() error {
 
-	if expView, err := gooey.View("expansions"); err == nil {
-		exps := ggdb.ReadAllExpansions()
-		menu.exp = readExp(expView, exps)
-	} else {
-		return err
-	}
+	menu.exps = ggdb.ReadExpansions(menu.cat)
+	menu.exp = readExp()
 
-	if textView, err := gooey.View("text"); err == nil {
+	if textView, err := menu.gooey.View("text"); err == nil {
 		textView.Clear()
 		fmt.Fprintln(textView, menu.exp.Text)
 	} else {
@@ -416,16 +444,12 @@ func runMenu(gooey *gocui.Gui) error {
 		if err := gooey.SetCurrentView("categories"); err != nil {
 			return err
 		}
-		if err := upText(menu.gooey); err != nil {
+		if err := upText(); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrQuit
 }
 
 // GengarMenu creates an example GUI.
