@@ -206,6 +206,26 @@ func closeCatPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+func closeExpPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+	if err := closePrompt(gooey, nil); err != nil {
+		return err
+	}
+	if err := focusExp(gooey, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func closePhrasePrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+	if err := closePrompt(gooey, nil); err != nil {
+		return err
+	}
+	if err := focusPhrase(gooey, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
 func newCat(gooey *gocui.Gui, promptView *gocui.View) error {
 
 	var cat ggdb.Category
@@ -231,16 +251,6 @@ func upCat(gooey *gocui.Gui, promptView *gocui.View) error {
 	return nil
 }
 
-func closeExpPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
-	if err := closePrompt(gooey, nil); err != nil {
-		return err
-	}
-	if err := focusExp(gooey, nil); err != nil {
-		return err
-	}
-	return nil
-}
-
 func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	var exp ggdb.Expansion
@@ -260,6 +270,33 @@ func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	menu.exp.Name = strings.TrimSpace(prompt.ViewBuffer())
 	ggdb.UpdateExpansionName(menu.exp)
+
+	if err := closeExpPrompt(gooey, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	var phrase ggdb.Phrase
+
+	phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
+	phrase.ExpID = menu.exp.ID
+	ggdb.AddPhrase(&phrase)
+
+	if err := closeExpPrompt(gooey, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	menu.phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
+	ggdb.AddPhrase(menu.phrase)
 
 	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err
@@ -331,7 +368,7 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
-	// If the expansions view is focused and ctrl+e is pressed, edit the current category.
+	// If the expansions view is focused and ctrl+e is pressed, edit the current expansion name.
 	if err := gooey.SetKeybinding("expansions", gocui.KeyCtrlE, gocui.ModNone, upExpPrompt); err != nil {
 		return err
 	}
@@ -348,6 +385,16 @@ func setKeyBinds(gooey *gocui.Gui) error {
 
 	// If the phrases view is focused and ← is pressed, move focus to the expansions menu.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowLeft, gocui.ModNone, focusExp); err != nil {
+		return err
+	}
+
+	// If the phrases view is focused and ctrl+n is pressed, add a new phrase.
+	if err := gooey.SetKeybinding("phrases", gocui.KeyCtrlN, gocui.ModNone, newPhrasePrompt); err != nil {
+		return err
+	}
+
+	// If the phrases view is focused and ctrl+e is pressed, edit the current phrase.
+	if err := gooey.SetKeybinding("phrases", gocui.KeyCtrlE, gocui.ModNone, upPhrasePrompt); err != nil {
 		return err
 	}
 
