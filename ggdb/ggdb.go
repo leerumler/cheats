@@ -12,8 +12,8 @@ import (
 
 // Phrase holds information about phrases.
 type Phrase struct {
-	Name  string
-	ExpID int
+	Name      string
+	ID, ExpID int
 }
 
 // Expansion holds information about expansions
@@ -97,8 +97,9 @@ func CleanSlate() {
 		FOREIGN KEY (cat_id) REFERENCES categories(id)
 	);
 	CREATE TABLE phrases (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
 		exp_id INTEGER,
-		name TEXT PRIMARY KEY,
 		FOREIGN KEY (exp_id) REFERENCES expansions(id)
 	);
 
@@ -172,7 +173,7 @@ func UpdateExpansionName(exp *Expansion) {
 	db := connectGGDB()
 	defer db.Close()
 
-	// Insert the expansion.
+	// Update the expansion.
 	if _, err := db.Exec("UPDATE expansions SET name = $1 WHERE id = $2;", exp.Name, exp.ID); err != nil {
 		log.Panicln("Couldn't update expansion: ", err)
 	}
@@ -185,9 +186,22 @@ func UpdateExpansionText(exp *Expansion) {
 	db := connectGGDB()
 	defer db.Close()
 
-	// Insert the expansion.
+	// Update the expansion.
 	if _, err := db.Exec("UPDATE expansions SET text = $1 WHERE id = $2;", exp.Text, exp.ID); err != nil {
 		log.Panicln("Couldn't update expansion: ", err)
+	}
+}
+
+// UpdatePhrase updates a phrase's name.
+func UpdatePhrase(phrase *Phrase) {
+
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Update the phrase.
+	if _, err := db.Exec("UPDATE phrases SET name = $1 WHERE id = $2;", phrase.Name, phrase.ID); err != nil {
+		log.Panicln("Couldn't update phrase: ", err)
 	}
 }
 
@@ -268,7 +282,7 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	defer db.Close()
 
 	// Query the database for Phrases matching the expansion's ID.
-	rows, err := db.Query("SELECT name FROM phrases WHERE exp_ID=$1;", exp.ID)
+	rows, err := db.Query("SELECT id, name, exp_id FROM phrases WHERE exp_ID=$1;", exp.ID)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -277,8 +291,7 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	// Load the query's results in to the Phrase slice.
 	for rows.Next() {
 		var phrase Phrase
-		err = rows.Scan(&phrase.Name)
-		phrase.ExpID = exp.ID
+		err = rows.Scan(&phrase.ID, &phrase.Name, &phrase.ExpID)
 		phrases = append(phrases, phrase)
 	}
 

@@ -296,7 +296,7 @@ func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	menu.phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
-	ggdb.AddPhrase(menu.phrase)
+	ggdb.UpdatePhrase(menu.phrase)
 
 	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err

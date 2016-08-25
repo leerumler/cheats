@@ -313,6 +313,8 @@ func drawPhrases() error {
 			fmt.Fprintln(phraseView, *padText(&phrase.Name, menu.maxX/6))
 		}
 
+		menu.phrase = readPhrase()
+
 	} else {
 		return err
 	}
@@ -361,6 +363,10 @@ func drawHelp() error {
 			case "newExpPrompt":
 				helpText = "exit: ctrl+x | save: ctrl+s"
 			case "upExpPrompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
+			case "newPhrasePrompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
+			case "upPhrasePrompt":
 				helpText = "exit: ctrl+x | save: ctrl+s"
 			}
 			helpText = *centerText(&helpText, menu.maxX)
