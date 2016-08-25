@@ -16,13 +16,15 @@ type ggMenu struct {
 	maxX, maxY int
 }
 
+var menu ggMenu
+
 // centerText takes a string of text and a length and pads the beginning
 // of the string with spaces to center that text in the available space.
-func centerText(text string, maxX int) string {
+func centerText(text *string, maxX int) *string {
 
-	numSpaces := maxX/2 - len(text)/2
-	for i := 0; i < numSpaces; i++ {
-		text = " " + text
+	numSpaces := maxX/2 - len(*text)/2
+	for i := 1; i < numSpaces; i++ {
+		*text = " " + *text
 	}
 
 	return text
@@ -30,18 +32,82 @@ func centerText(text string, maxX int) string {
 
 // padText takes a string of text and pads the end of it with spaces to
 // fill the available space in a cell.
-func padText(text string, maxX int) string {
+func padText(text *string, maxX int) *string {
 
-	numSpaces := maxX - len(text)
+	numSpaces := maxX - len(*text)
 	for i := 0; i < numSpaces; i++ {
-		text = text + " "
+		*text = *text + " "
 	}
 
 	return text
 }
 
+func popUp(message *string) error {
+
+	minX := menu.maxX * 1 / 4
+	maxX := menu.maxX * 3 / 4
+	minY := menu.maxY/2 - 1
+	maxY := menu.maxY/2 + 1
+
+	if popUp, err := menu.gooey.SetView("popUp", minX, minY, maxX, maxY); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		fmt.Fprintln(popUp, *centerText(message, maxX-minX))
+	}
+
+	return nil
+}
+
+func promptInput(title *string, prev *string) error {
+
+	//
+	minX := menu.maxX * 1 / 4
+	maxX := menu.maxX * 3 / 4
+	midY := menu.maxY / 2
+
+	if promptHead, err := menu.gooey.SetView("promptHead", minX, midY-2, maxX, midY); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		fmt.Fprintln(promptHead, *centerText(title, menu.maxX/2))
+	}
+
+	if prompt, err := menu.gooey.SetView("prompt", minX, midY, maxX, midY+2); err != nil {
+		if err != gocui.ErrUnknownView {
+			return err
+		}
+
+		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		menu.gooey.Cursor = true
+		prompt.Editable = true
+
+	}
+
+	// Focus on the prompt view.
+	if err := menu.gooey.SetCurrentView("prompt"); err != nil {
+		return err
+	}
+
+	if prompt, err := menu.gooey.View("prompt"); err == nil {
+
+		prompt.Clear()
+
+		if prev != nil {
+			fmt.Fprintln(prompt, *prev)
+		}
+
+	} else {
+		return err
+	}
+
+	return nil
+}
+
 // drawHeader adds the "Gengar Configuration Editor" header to the top of the menu.
-func drawHeader(menu *ggMenu) error {
+func drawHeader() error {
 
 	// Place the header view at the top of the menu and extend it down two pixels.
 	if header, err := menu.gooey.SetView("header", 0, 0, menu.maxX-1, 2); err != nil {
@@ -50,8 +116,8 @@ func drawHeader(menu *ggMenu) error {
 		}
 
 		// Center the header text and print it to the view.
-		head := centerText("Gengar Configuration Editor", menu.maxX)
-		fmt.Fprintln(header, head)
+		ggHead := "Gengar Configuration Editor"
+		fmt.Fprintln(header, *centerText(&ggHead, menu.maxX))
 	}
 
 	return nil
@@ -59,7 +125,7 @@ func drawHeader(menu *ggMenu) error {
 }
 
 // drawCategories draws the categories menu, which displays all available categories.
-func drawCategories(menu *ggMenu) error {
+func drawCategories() error {
 
 	// Find minY, which will be the bottom of the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
@@ -99,15 +165,14 @@ func drawCategories(menu *ggMenu) error {
 
 		// Print the name of each category in rows on the menu.
 		for _, cat := range cats {
-			category := padText(cat.Name, menu.maxX/6)
-			fmt.Fprintln(catView, category)
+			fmt.Fprintln(catView, *padText(&cat.Name, menu.maxX/6))
 		}
 
 		// Check the currently selected row and store its matching category.
 		menu.cat = readCat(catView, cats)
 
 	} else {
-		log.Fatal(err)
+		return err
 	}
 
 	return nil
@@ -115,7 +180,7 @@ func drawCategories(menu *ggMenu) error {
 
 // drawExpansions creates the expansions view, which displays all of the expansions
 // in the currently selected category.
-func drawExpansions(menu *ggMenu) error {
+func drawExpansions() error {
 
 	// Find minY, which will be the bottom of the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
@@ -159,8 +224,7 @@ func drawExpansions(menu *ggMenu) error {
 
 		// Print name of each expansion to the view.
 		for _, exp := range exps {
-			expName := padText(exp.Name, menu.maxX*4/6)
-			fmt.Fprintln(expView, expName)
+			fmt.Fprintln(expView, *padText(&exp.Name, menu.maxX*4/6))
 		}
 
 		// Check the currently selected row and store its matching expansion.
@@ -175,19 +239,19 @@ func drawExpansions(menu *ggMenu) error {
 
 // drawPhrases creates the phrases view, which displays all of the phrases
 // mapped to the currently selected expansion.
-func drawPhrases(menu *ggMenu) error {
+func drawPhrases() error {
 
 	// Find the lowest coordinate of the header view, which will serve as
 	// the top coordinate on the header view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("header")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Find minX, which is the right side of the expansions view.
 	_, _, minX, _, err := menu.gooey.ViewPosition("expansions")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create a view for the phrases header and print the title.
@@ -220,8 +284,7 @@ func drawPhrases(menu *ggMenu) error {
 
 		// Print each of the phrases to the view.
 		for _, phrase := range phrases {
-			phraseText := padText(phrase.Phrase, menu.maxX/6)
-			fmt.Fprintln(phraseView, phraseText)
+			fmt.Fprintln(phraseView, *padText(&phrase.Phrase, menu.maxX/6))
 		}
 
 	} else {
@@ -231,12 +294,12 @@ func drawPhrases(menu *ggMenu) error {
 	return nil
 }
 
-func drawHelp(menu *ggMenu) error {
+func drawHelp() error {
 
 	// Find minY, which will be the bottom of the expansions view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("expansions")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Create a view to hold the help menu.
@@ -258,15 +321,17 @@ func drawHelp(menu *ggMenu) error {
 
 			switch curView.Name() {
 			case "categories":
-				helpText += "new: n | edit: e | select: ⏎"
+				helpText += "new: ctrl+n | edit: ctrl+e | select: ⏎"
 			case "expansions":
-				helpText += "new: n | edit: e | select: ⏎"
+				helpText += "new: ctrl+n | edit: ctrl+e | select: ⏎"
 			case "phrases":
-				helpText += "new: n | edit: e"
+				helpText += "new: ctrl+n | edit: ctrl+e"
 			case "text":
-				helpText += "quit: ctrl+x | save: ctrl+s | reload: ctrl+r"
+				helpText += "exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
+			case "prompt":
+				helpText = "exit: ctrl+x | save: ctrl+s"
 			}
-			helpText = centerText(helpText, menu.maxX)
+			helpText = *centerText(&helpText, menu.maxX)
 			fmt.Fprintln(help, helpText)
 		}
 
@@ -278,7 +343,7 @@ func drawHelp(menu *ggMenu) error {
 }
 
 //
-func drawText(menu *ggMenu) error {
+func drawText() error {
 
 	// Find minY, which will be the bottom of the expansions view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("help")
@@ -303,17 +368,16 @@ func drawText(menu *ggMenu) error {
 
 func upText(gooey *gocui.Gui) error {
 
-	var exp ggdb.Expansion
 	if expView, err := gooey.View("expansions"); err == nil {
 		exps := ggdb.ReadAllExpansions()
-		exp = *readExp(expView, exps)
+		menu.exp = readExp(expView, exps)
 	} else {
-		return nil
+		return err
 	}
 
 	if textView, err := gooey.View("text"); err == nil {
 		textView.Clear()
-		fmt.Fprintln(textView, exp.Text)
+		fmt.Fprintln(textView, menu.exp.Text)
 	} else {
 		return err
 	}
@@ -324,27 +388,26 @@ func upText(gooey *gocui.Gui) error {
 func runMenu(gooey *gocui.Gui) error {
 
 	// Create a ggMenu variable and populate it with some basic info.
-	var menu ggMenu
 	menu.gooey = gooey
 	menu.maxX, menu.maxY = menu.gooey.Size()
 
 	// Draw the views in the menu.
-	if err := drawHeader(&menu); err != nil {
+	if err := drawHeader(); err != nil {
 		return err
 	}
-	if err := drawCategories(&menu); err != nil {
+	if err := drawCategories(); err != nil {
 		return err
 	}
-	if err := drawExpansions(&menu); err != nil {
+	if err := drawExpansions(); err != nil {
 		return err
 	}
-	if err := drawPhrases(&menu); err != nil {
+	if err := drawPhrases(); err != nil {
 		return err
 	}
-	if err := drawHelp(&menu); err != nil {
+	if err := drawHelp(); err != nil {
 		return err
 	}
-	if err := drawText(&menu); err != nil {
+	if err := drawText(); err != nil {
 		return err
 	}
 

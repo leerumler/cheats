@@ -43,7 +43,7 @@ func findGGDB() *string {
 	// Check the current user.
 	usr, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Find the homedir and add the rest of the path.
@@ -65,7 +65,7 @@ func connectGGDB() *sql.DB {
 	dbfile := findGGDB()
 	db, err := sql.Open("sqlite3", *dbfile)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return a pointer to that database connection.
@@ -92,7 +92,7 @@ func CleanSlate() {
 	CREATE TABLE expansions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE,
-		text TEXT NOT NULL UNIQUE,
+		text TEXT UNIQUE,
 		cat_id INTEGER DEFAULT 1,
 		FOREIGN KEY (cat_id) REFERENCES categories(id)
 	);
@@ -107,7 +107,7 @@ func CleanSlate() {
 
 	// Die on error.
 	if err != nil {
-		log.Fatal("Couldn't create CleanSlate:", err)
+		log.Panicln("Couldn't create CleanSlate:", err)
 	}
 }
 
@@ -161,7 +161,7 @@ func UpdateExpansion(exp *Expansion) {
 
 	// Insert the expansion.
 	if _, err := db.Exec("UPDATE expansions SET text = $1 WHERE id = $2;", exp.Text, exp.ID); err != nil {
-		log.Panicln("Couldn't insert expansion: ", err)
+		log.Panicln("Couldn't update expansion: ", err)
 	}
 }
 
@@ -178,7 +178,7 @@ func ReadCategories() []Category {
 	// Query the database for all available categories.
 	rows, err := db.Query("SELECT id, name FROM categories;")
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -191,7 +191,7 @@ func ReadCategories() []Category {
 
 	// Die on error.
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return the filled slice of Categories
@@ -211,7 +211,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	// Query the database for Expansions matching the category's ID.
 	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions WHERE cat_id=$1;", cat.ID)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -224,7 +224,7 @@ func ReadExpansions(cat *Category) []Expansion {
 
 	// Die on error.
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return the populated slice of Expansions.
@@ -244,7 +244,7 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	// Query the database for Phrases matching the expansion's ID.
 	rows, err := db.Query("SELECT name FROM phrases WHERE exp_ID=$1;", exp.ID)
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -258,7 +258,7 @@ func ReadPhrases(exp *Expansion) []Phrase {
 
 	// Die on error.
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return the populated slice of phrases.
@@ -278,7 +278,7 @@ func ReadAllExpansions() []Expansion {
 	// Query the database for all Expansions.
 	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions;")
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -291,7 +291,7 @@ func ReadAllExpansions() []Expansion {
 
 	// Die on error.
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return the populated slice of expansions.
@@ -359,7 +359,7 @@ func ReadExpanders() []Expander {
 	// Query the database for the expansions.
 	rows, err := db.Query("SELECT phrases.name, text FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
 	if err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 	defer rows.Close()
 
@@ -372,7 +372,7 @@ func ReadExpanders() []Expander {
 
 	// Die on error.
 	if err = rows.Err(); err != nil {
-		log.Fatal(err)
+		log.Panicln(err)
 	}
 
 	// Return pointer to exps.
