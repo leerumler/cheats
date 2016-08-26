@@ -2,6 +2,7 @@ package ggdb
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"os/user"
@@ -304,61 +305,143 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	return phrases
 }
 
-// ReadAllExpansions reads all of the available expansions from the database.
-func ReadAllExpansions() []Expansion {
-
-	// Create an empty slice of Expansions to fill.
-	var exps []Expansion
+// DeleteCategory deletes an entire category and all of its expansions and their mapped phrases.
+func DeleteCategory(cat *Category) {
 
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
 
-	// Query the database for all Expansions.
-	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions;")
-	if err != nil {
-		log.Panicln(err)
-	}
-	defer rows.Close()
+	// Get a list of all expansions in that category.
+	exps := ReadExpansions(cat)
 
-	// Load the query's results in to new Expansions and append those to the slice.
-	for rows.Next() {
-		var exp Expansion
-		err = rows.Scan(&exp.ID, &exp.Name, &exp.Text, &exp.CatID)
-		exps = append(exps, exp)
-	}
-
-	// Die on error.
-	if err = rows.Err(); err != nil {
-		log.Panicln(err)
-	}
-
-	// Return the populated slice of expansions.
-	return exps
-}
-
-// ReadAllPhrases reads all of the available phrases from the database.
-func ReadAllPhrases() []Phrase {
-
-	// Create an empty slice of Phrases to fill.
+	// Get a list of all phrases in each of those expansions.
 	var phrases []Phrase
+	for _, exp := range exps {
+		phrases = append(phrases, ReadPhrases(&exp)...)
+	}
 
+	// Create a query that will delete all of the phrases.
+	var delPhrase string
+	for _, phrase := range phrases {
+		delPhrase += "DELETE FROM phrases WHERE id = " + fmt.Sprint(phrase.ID) + "; "
+	}
+
+	// Delete the phrases.
+	if _, err := db.Exec(delPhrase); err != nil {
+		log.Panicln("Couldn't Delete Phrases: ", err)
+	}
+
+	// Create a query that will delete all of the expansions.
+	var delExp string
+	for _, exp := range exps {
+		delExp += "DELETE FROM expansions WHERE id = " + fmt.Sprint(exp.ID) + "; "
+	}
+
+	// Delete the expansions.
+	if _, err := db.Exec(delExp); err != nil {
+		log.Panicln("Couldn't Delete Expansions: ", err)
+	}
+
+	// Delete the category.
+	if _, err := db.Exec("DELETE FROM categories WHERE id = $1", cat.ID); err != nil {
+		log.Panicln("Couldn't Delete Category: ", err)
+	}
+}
+
+// DeleteExpansion deletes an expansion and all of its associated phrases.
+func DeleteExpansion(exp *Expansion) {
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
 
-	// Get all of the available expansions.
-	exps := ReadAllExpansions()
+	//
+	phrases := ReadPhrases(exp)
 
-	// For each of the expansions, read the phrases and append them to the slice.
-	for _, exp := range exps {
-		newPhrases := ReadPhrases(&exp)
-		phrases = append(phrases, newPhrases...)
+	// Create a query that will delete all of the phrases.
+	var delPhrase string
+	for _, phrase := range phrases {
+		delPhrase += "DELETE FROM phrases WHERE id = " + fmt.Sprint(phrase.ID) + "; "
 	}
 
-	// Return the populated slice of phrases.
-	return phrases
+	// Delete the phrases.
+	if _, err := db.Exec(delPhrase); err != nil {
+		log.Panicln("Couldn't Delete Phrases: ", err)
+	}
+
+	// Delete the expansion.
+	if _, err := db.Exec("DELETE FROM expansions WHERE id = $1", exp.ID); err != nil {
+		log.Panicln("Couldn't Delete Expansion: ", err)
+	}
 }
+
+// DeletePhrase deletes a phrase from Gengar's database.
+func DeletePhrase(phrase *Phrase) {
+	// Connect to the database.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Delete the phrase.
+	if _, err := db.Exec("DELETE FROM phrases WHERE id = $1", phrase.ID); err != nil {
+		log.Panicln("Couldn't Delete Phrase: ", err)
+	}
+}
+
+// // ReadAllExpansions reads all of the available expansions from the database.
+// func ReadAllExpansions() []Expansion {
+//
+// 	// Create an empty slice of Expansions to fill.
+// 	var exps []Expansion
+//
+// 	// Connect to the database.
+// 	db := connectGGDB()
+// 	defer db.Close()
+//
+// 	// Query the database for all Expansions.
+// 	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions;")
+// 	if err != nil {
+// 		log.Panicln(err)
+// 	}
+// 	defer rows.Close()
+//
+// 	// Load the query's results in to new Expansions and append those to the slice.
+// 	for rows.Next() {
+// 		var exp Expansion
+// 		err = rows.Scan(&exp.ID, &exp.Name, &exp.Text, &exp.CatID)
+// 		exps = append(exps, exp)
+// 	}
+//
+// 	// Die on error.
+// 	if err = rows.Err(); err != nil {
+// 		log.Panicln(err)
+// 	}
+//
+// 	// Return the populated slice of expansions.
+// 	return exps
+// }
+//
+// // ReadAllPhrases reads all of the available phrases from the database.
+// func ReadAllPhrases() []Phrase {
+//
+// 	// Create an empty slice of Phrases to fill.
+// 	var phrases []Phrase
+//
+// 	// Connect to the database.
+// 	db := connectGGDB()
+// 	defer db.Close()
+//
+// 	// Get all of the available expansions.
+// 	exps := ReadAllExpansions()
+//
+// 	// For each of the expansions, read the phrases and append them to the slice.
+// 	for _, exp := range exps {
+// 		newPhrases := ReadPhrases(&exp)
+// 		phrases = append(phrases, newPhrases...)
+// 	}
+//
+// 	// Return the populated slice of phrases.
+// 	return phrases
+// }
 
 // CreateTestDB creates a test database.
 func CreateTestDB() {

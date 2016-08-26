@@ -226,25 +226,61 @@ func closePhrasePrompt(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
-func newCat(gooey *gocui.Gui, promptView *gocui.View) error {
+func newCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	var cat ggdb.Category
-	cat.Name = strings.TrimSpace(promptView.ViewBuffer())
+	cat.Name = strings.TrimSpace(prompt.ViewBuffer())
 	ggdb.AddCategory(&cat)
 
-	if err := closeCatPrompt(gooey, promptView); err != nil {
+	if err := closeCatPrompt(gooey, prompt); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func upCat(gooey *gocui.Gui, promptView *gocui.View) error {
+func upCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
-	menu.cat.Name = strings.TrimSpace(promptView.ViewBuffer())
+	menu.cat.Name = strings.TrimSpace(prompt.ViewBuffer())
 	ggdb.UpdateCategory(menu.cat)
 
-	if err := closeCatPrompt(gooey, promptView); err != nil {
+	if err := closeCatPrompt(gooey, prompt); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func delCat(gooey *gocui.Gui, view *gocui.View) error {
+
+	menu.cat = readCat()
+	ggdb.DeleteCategory(menu.cat)
+
+	if err := selUp(gooey, view); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func delExp(gooey *gocui.Gui, view *gocui.View) error {
+
+	menu.exp = readExp()
+	ggdb.DeleteExpansion(menu.exp)
+
+	if err := selUp(gooey, view); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func delPhrase(gooey *gocui.Gui, view *gocui.View) error {
+
+	menu.phrase = readPhrase()
+	ggdb.DeletePhrase(menu.phrase)
+
+	if err := selUp(gooey, view); err != nil {
 		return err
 	}
 
@@ -333,6 +369,11 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
+	// If the categories view is focused and ctrl+d is pressed, delete the currently selected category.
+	if err := gooey.SetKeybinding("categories", gocui.KeyCtrlD, gocui.ModNone, delCat); err != nil {
+		return err
+	}
+
 	// If the categories view is focused and Enter is pressed, move focus to the expansions view.
 	if err := gooey.SetKeybinding("categories", gocui.KeyEnter, gocui.ModNone, focusExp); err != nil {
 		return err
@@ -373,6 +414,11 @@ func setKeyBinds(gooey *gocui.Gui) error {
 		return err
 	}
 
+	// If the expansions view is focused and ctrl+d is pressed, delete the currently selected expansion.
+	if err := gooey.SetKeybinding("expansions", gocui.KeyCtrlD, gocui.ModNone, delExp); err != nil {
+		return err
+	}
+
 	// If the phrases view is focused and ↑ is pressed, move the selected menu item up one.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyArrowUp, gocui.ModNone, selUp); err != nil {
 		return err
@@ -395,6 +441,11 @@ func setKeyBinds(gooey *gocui.Gui) error {
 
 	// If the phrases view is focused and ctrl+e is pressed, edit the current phrase.
 	if err := gooey.SetKeybinding("phrases", gocui.KeyCtrlE, gocui.ModNone, upPhrasePrompt); err != nil {
+		return err
+	}
+
+	// If the phrases view is focused and ctrl+d is pressed, delete the currently selected phrase.
+	if err := gooey.SetKeybinding("phrases", gocui.KeyCtrlD, gocui.ModNone, delPhrase); err != nil {
 		return err
 	}
 

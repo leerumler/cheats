@@ -349,11 +349,11 @@ func drawHelp() error {
 
 			switch curView.Name() {
 			case "categories":
-				helpText += "new: ctrl+n | edit: ctrl+e | select: ⏎"
+				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
 			case "expansions":
-				helpText += "new: ctrl+n | edit: ctrl+e | select: ⏎"
+				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
 			case "phrases":
-				helpText += "new: ctrl+n | edit: ctrl+e"
+				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d "
 			case "text":
 				helpText += "exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
 			case "newCatPrompt":
