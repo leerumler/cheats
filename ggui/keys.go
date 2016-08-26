@@ -98,6 +98,10 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	if err := runMenu(gooey); err != nil {
+		return err
+	}
+
 	// Refresh text view.
 	upText()
 
@@ -121,6 +125,10 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 	if expView, err := gooey.View("expansions"); err == nil {
 		expView.SelBgColor = gocui.ColorCyan
 	} else {
+		return err
+	}
+
+	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
@@ -148,6 +156,10 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 	if phraseView, err := gooey.View("phrases"); err == nil {
 		phraseView.SelBgColor = gocui.ColorCyan
 	} else {
+		return err
+	}
+
+	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
