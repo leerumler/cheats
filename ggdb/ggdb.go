@@ -89,7 +89,6 @@ func CleanSlate() {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE
 	);
-	INSERT INTO categories (name) VALUES ("default");
 	CREATE TABLE expansions (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL,
@@ -420,6 +419,10 @@ func ReadExpanders() []Expander {
 
 // CreateTestDB creates a test database.
 func CreateTestDB() {
+
+	// Create a test category.
+	cat := Category{Name: "category1", ID: 1}
+	AddCategory(&cat)
 
 	// Create some testing expansions.
 	var exps []Expansion

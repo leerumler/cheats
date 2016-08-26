@@ -24,8 +24,8 @@ func main() {
 
 	case *reset:
 
-		// Reset the test database.
-		ggdb.CreateTestDB()
+		// Create a blank database.
+		ggdb.CleanSlate()
 
 	default:
 
