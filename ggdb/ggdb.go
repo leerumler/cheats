@@ -387,6 +387,70 @@ func DeletePhrase(phrase *Phrase) {
 	}
 }
 
+// ReadExpanders reads expansions from the database and returns a slice of Expanders.
+func ReadExpanders() []Expander {
+	var exps []Expander
+
+	// Get pointer to database connection.
+	db := connectGGDB()
+	defer db.Close()
+
+	// Query the database for the expansions.
+	rows, err := db.Query("SELECT phrases.name, text FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer rows.Close()
+
+	// Read through the results and populate exps with returned info.
+	for rows.Next() {
+		var exp Expander
+		err = rows.Scan(&exp.Phrase, &exp.Expansion)
+		exps = append(exps, exp)
+	}
+
+	// Die on error.
+	if err = rows.Err(); err != nil {
+		log.Panicln(err)
+	}
+
+	// Return pointer to exps.
+	return exps
+}
+
+// CreateTestDB creates a test database.
+func CreateTestDB() {
+
+	// Create some testing expansions.
+	var exps []Expansion
+	exps = append(exps, Expansion{Name: "Test 1", Text: "This is test 1!", ID: 1, CatID: 1})
+	exps = append(exps, Expansion{Name: "Test 2", Text: "this is test 2?", ID: 2, CatID: 1})
+	exps = append(exps, Expansion{Name: "Test 3", Text: "this is test 3!?@$", ID: 3, CatID: 1})
+
+	// Create some test phrases.
+	var phrases []Phrase
+	phrases = append(phrases, Phrase{Name: "test1", ExpID: 1})
+	phrases = append(phrases, Phrase{Name: "test2", ExpID: 2})
+	phrases = append(phrases, Phrase{Name: "test3", ExpID: 3})
+
+	// Wipe/create a blank gengar database.
+	CleanSlate()
+
+	// Insert each of our testing expansions and phrases.
+	for _, exp := range exps {
+		AddExpansion(&exp)
+	}
+	for _, exp := range exps {
+		UpdateExpansionText(&exp)
+	}
+	for _, phrase := range phrases {
+		AddPhrase(&phrase)
+	}
+}
+
+// There shouldn't be much need to read all expansions or phrases, but...
+// they're already written, so I have no reason to delete them yet.
+
 // // ReadAllExpansions reads all of the available expansions from the database.
 // func ReadAllExpansions() []Expansion {
 //
@@ -442,64 +506,3 @@ func DeletePhrase(phrase *Phrase) {
 // 	// Return the populated slice of phrases.
 // 	return phrases
 // }
-
-// CreateTestDB creates a test database.
-func CreateTestDB() {
-
-	// Create some testing expansions.
-	var exps []Expansion
-	exps = append(exps, Expansion{Name: "Test 1", Text: "This is test 1!", ID: 1, CatID: 1})
-	exps = append(exps, Expansion{Name: "Test 2", Text: "this is test 2?", ID: 2, CatID: 1})
-	exps = append(exps, Expansion{Name: "Test 3", Text: "this is test 3!?@$", ID: 3, CatID: 1})
-
-	// Create some test phrases.
-	var phrases []Phrase
-	phrases = append(phrases, Phrase{Name: "test1", ExpID: 1})
-	phrases = append(phrases, Phrase{Name: "test2", ExpID: 2})
-	phrases = append(phrases, Phrase{Name: "test3", ExpID: 3})
-
-	// Wipe/create a blank gengar database.
-	CleanSlate()
-
-	// Insert each of our testing expansions and phrases.
-	for _, exp := range exps {
-		AddExpansion(&exp)
-	}
-	for _, exp := range exps {
-		UpdateExpansionText(&exp)
-	}
-	for _, phrase := range phrases {
-		AddPhrase(&phrase)
-	}
-}
-
-// ReadExpanders reads expansions from the database and returns a slice of Expanders.
-func ReadExpanders() []Expander {
-	var exps []Expander
-
-	// Get pointer to database connection.
-	db := connectGGDB()
-	defer db.Close()
-
-	// Query the database for the expansions.
-	rows, err := db.Query("SELECT phrases.name, text FROM phrases JOIN expansions ON phrases.exp_id = expansions.id;")
-	if err != nil {
-		log.Panicln(err)
-	}
-	defer rows.Close()
-
-	// Read through the results and populate exps with returned info.
-	for rows.Next() {
-		var exp Expander
-		err = rows.Scan(&exp.Phrase, &exp.Expansion)
-		exps = append(exps, exp)
-	}
-
-	// Die on error.
-	if err = rows.Err(); err != nil {
-		log.Panicln(err)
-	}
-
-	// Return pointer to exps.
-	return exps
-}

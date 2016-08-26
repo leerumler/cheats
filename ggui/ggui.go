@@ -345,30 +345,31 @@ func drawHelp() error {
 
 			// var helpText string
 			help.Clear()
+
 			// helpText := "quit: ctrl+q | up: ↑ | down: ↓ | left: ← | right: → | "
 
 			var helpText string
 			switch curView.Name() {
 			case "categories":
-				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
+				helpText = "select: ⏎ | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | quit: ctrl+q"
 			case "expansions":
-				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
+				helpText = "select: ⏎ | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | quit: ctrl+q"
 			case "phrases":
-				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d "
+				helpText = "new: ctrl+n | edit: ctrl+e | delete: ctrl+d | quit: ctrl+q"
 			case "text":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
+				helpText = "save: ctrl+s | reload: ctrl+r | exit: ctrl+x | quit: ctrl+q "
 			case "newCatPrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			case "upCatPrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			case "newExpPrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			case "upExpPrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			case "newPhrasePrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			case "upPhrasePrompt":
-				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
+				helpText = "save: ctrl+s | exit: ctrl+x | quit: ctrl+q "
 			}
 			helpText = *centerText(&helpText, menu.maxX)
 			fmt.Fprintln(help, helpText)
