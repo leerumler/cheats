@@ -45,10 +45,20 @@ func padText(text *string, maxX int) *string {
 
 	numSpaces := maxX - len(*text)
 	for i := 0; i < numSpaces; i++ {
-		*text = *text + " "
+		*text += " "
 	}
 
 	return text
+}
+
+func emptyLine(length int) *string {
+
+	var blank string
+	for i := 0; i < length; i++ {
+		blank += " "
+	}
+
+	return &blank
 }
 
 // readSel reads the currently selected line and returns a string
@@ -189,6 +199,11 @@ func drawCategories() error {
 		// Read the categories from the database.
 		menu.cats = ggdb.ReadCategories()
 
+		// If the category list is empty, print a blank line.
+		if len(menu.cats) == 0 {
+			fmt.Fprintln(catView, *emptyLine(menu.maxX / 6))
+		}
+
 		// Print the name of each category in rows on the menu.
 		for _, cat := range menu.cats {
 			fmt.Fprintln(catView, *padText(&cat.Name, menu.maxX/6))
@@ -247,6 +262,11 @@ func drawExpansions() error {
 
 		// Read the expansions from the database.
 		menu.exps = ggdb.ReadExpansions(menu.cat)
+
+		// If the expansions list is empty, print a blank line.
+		if len(menu.exps) == 0 {
+			fmt.Fprintln(expView, *emptyLine(menu.maxX * 4 / 6))
+		}
 
 		// Print name of each expansion to the view.
 		for _, exp := range menu.exps {
@@ -307,6 +327,11 @@ func drawPhrases() error {
 
 		// Read the phrases from the database.
 		menu.phrases = ggdb.ReadPhrases(menu.exp)
+
+		// If the expansions list is empty, print a blank line.
+		if len(menu.phrases) == 0 {
+			fmt.Fprintln(phraseView, *emptyLine(menu.maxX / 6))
+		}
 
 		// Print each of the phrases to the view.
 		for _, phrase := range menu.phrases {
