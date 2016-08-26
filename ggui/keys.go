@@ -263,30 +263,6 @@ func delCat(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
-func delExp(gooey *gocui.Gui, view *gocui.View) error {
-
-	menu.exp = readExp()
-	ggdb.DeleteExpansion(menu.exp)
-
-	if err := selUp(gooey, view); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func delPhrase(gooey *gocui.Gui, view *gocui.View) error {
-
-	menu.phrase = readPhrase()
-	ggdb.DeletePhrase(menu.phrase)
-
-	if err := selUp(gooey, view); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	var exp ggdb.Expansion
@@ -314,6 +290,18 @@ func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+func delExp(gooey *gocui.Gui, view *gocui.View) error {
+
+	menu.exp = readExp()
+	ggdb.DeleteExpansion(menu.exp)
+
+	if err := selUp(gooey, view); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	var phrase ggdb.Phrase
@@ -322,7 +310,7 @@ func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 	phrase.ExpID = menu.exp.ID
 	ggdb.AddPhrase(&phrase)
 
-	if err := closeExpPrompt(gooey, nil); err != nil {
+	if err := closePhrasePrompt(gooey, nil); err != nil {
 		return err
 	}
 
@@ -334,7 +322,19 @@ func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 	menu.phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
 	ggdb.UpdatePhrase(menu.phrase)
 
-	if err := closeExpPrompt(gooey, nil); err != nil {
+	if err := closePhrasePrompt(gooey, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func delPhrase(gooey *gocui.Gui, view *gocui.View) error {
+
+	menu.phrase = readPhrase()
+	ggdb.DeletePhrase(menu.phrase)
+
+	if err := selUp(gooey, view); err != nil {
 		return err
 	}
 

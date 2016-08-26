@@ -345,29 +345,30 @@ func drawHelp() error {
 
 			// var helpText string
 			help.Clear()
-			helpText := "up: ↑ | down: ↓ | left: ← | right: → | "
+			// helpText := "quit: ctrl+q | up: ↑ | down: ↓ | left: ← | right: → | "
 
+			var helpText string
 			switch curView.Name() {
 			case "categories":
-				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
+				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
 			case "expansions":
-				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
+				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d | select: ⏎"
 			case "phrases":
-				helpText += "new: ctrl+n | edit: ctrl+e | delete: ctrl+d "
+				helpText = "quit: ctrl+q | new: ctrl+n | edit: ctrl+e | delete: ctrl+d "
 			case "text":
-				helpText += "exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s | reload: ctrl+r"
 			case "newCatPrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			case "upCatPrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			case "newExpPrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			case "upExpPrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			case "newPhrasePrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			case "upPhrasePrompt":
-				helpText = "exit: ctrl+x | save: ctrl+s"
+				helpText = "quit: ctrl+q | exit: ctrl+x | save: ctrl+s"
 			}
 			helpText = *centerText(&helpText, menu.maxX)
 			fmt.Fprintln(help, helpText)
@@ -472,7 +473,7 @@ func GengarMenu() {
 	gooey.SetLayout(runMenu)
 
 	// Always have an exit strategy.
-	if err := gooey.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+	if err := gooey.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, quit); err != nil {
 		log.Panicln(err)
 	}
 
