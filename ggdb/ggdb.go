@@ -216,7 +216,7 @@ func ReadCategories() []Category {
 	defer db.Close()
 
 	// Query the database for all available categories.
-	rows, err := db.Query("SELECT id, name FROM categories;")
+	rows, err := db.Query("SELECT id, name FROM categories ORDER BY name;")
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -249,7 +249,7 @@ func ReadExpansions(cat *Category) []Expansion {
 	defer db.Close()
 
 	// Query the database for Expansions matching the category's ID.
-	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions WHERE cat_id=$1;", cat.ID)
+	rows, err := db.Query("SELECT id, name, text, cat_id FROM expansions WHERE cat_id=$1 ORDER BY name;", cat.ID)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -282,7 +282,7 @@ func ReadPhrases(exp *Expansion) []Phrase {
 	defer db.Close()
 
 	// Query the database for Phrases matching the expansion's ID.
-	rows, err := db.Query("SELECT id, name, exp_id FROM phrases WHERE exp_ID=$1;", exp.ID)
+	rows, err := db.Query("SELECT id, name, exp_id FROM phrases WHERE exp_ID=$1 ORDER BY name;", exp.ID)
 	if err != nil {
 		log.Panicln(err)
 	}

@@ -438,6 +438,7 @@ func upText() error {
 
 	if textView, err := menu.gooey.View("text"); err == nil {
 		textView.Clear()
+		textView.SetCursor(0, 0)
 		fmt.Fprintln(textView, menu.exp.Text)
 	} else {
 		return err
