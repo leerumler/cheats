@@ -64,3 +64,9 @@ var skipKeys = []string{
 	"Caps_Lock",
 	"Num_Lock",
 }
+
+var skipMods = []string{
+	"control",
+	"mod1",
+	"mod4",
+}

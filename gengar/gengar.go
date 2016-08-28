@@ -143,6 +143,15 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 				}
 			}
 
+			// We don't need any ctrl+keys.
+			modStr := keybind.ModifierString(keyPress.State)
+			for _, mod := range skipMods {
+				if strings.Contains(modStr, mod) {
+					log.Println("Skipped Key:", keyStr)
+					keep = false
+				}
+			}
+
 			// As long as it's not in skipKeys, add it to keyBytes.
 			if keep {
 
