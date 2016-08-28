@@ -143,7 +143,7 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 				}
 			}
 
-			// We don't need any ctrl+keys.
+			// Skip over control, alt, and mod4.
 			modStr := keybind.ModifierString(keyPress.State)
 			for _, mod := range skipMods {
 				if strings.Contains(modStr, mod) {
