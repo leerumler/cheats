@@ -20,12 +20,15 @@ func selUp(gooey *gocui.Gui, view *gocui.View) error {
 		view.MoveCursor(0, -1, false)
 	}
 
+	// Refresh the categories, expansions, and phrases views.
 	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
 	// Refresh text view.
-	upText()
+	if err := upText(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -43,12 +46,15 @@ func selDown(gooey *gocui.Gui, view *gocui.View) error {
 		}
 	}
 
+	// Refresh the categories, expansions, and phrases views.
 	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
 	// Refresh text view.
-	upText()
+	if err := upText(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -98,12 +104,15 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Refresh the categories, expansions, and phrases views.
 	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
 	// Refresh text view.
-	upText()
+	if err := upText(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -128,12 +137,15 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Refresh the categories, expansions, and phrases views.
 	if err := runMenu(gooey); err != nil {
 		return err
 	}
 
 	// Refresh text view.
-	upText()
+	if err := upText(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -159,6 +171,7 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
+	// Refresh the categories, expansions, and phrases views.
 	if err := runMenu(gooey); err != nil {
 		return err
 	}
@@ -166,6 +179,7 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+// focusText changes the focus to the text view.
 func focusText(gooey *gocui.Gui, view *gocui.View) error {
 
 	// Focus on the text view.
@@ -180,17 +194,19 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+// saveText saves the text inside of the text view to Gengar's database.
 func saveText(gooey *gocui.Gui, textView *gocui.View) error {
 
-	// // Update menu.exp.Text to the text in the view.
+	// Update menu.exp.Text to the text in the view.
 	menu.exp.Text = strings.TrimSpace(textView.ViewBuffer())
 
 	// Update the database with the new value.
 	ggdb.UpdateExpansionText(menu.exp)
 
-	if err := upText(); err != nil {
-		return err
-	}
+	// Refresh the text view.
+	// if err := upText(); err != nil {
+	// 	return err
+	// }
 
 	// Change focus to the expansions view.
 	if err := focusExp(gooey, nil); err != nil {
@@ -200,50 +216,81 @@ func saveText(gooey *gocui.Gui, textView *gocui.View) error {
 	return nil
 }
 
+// closePrompt doesn't actually close anything.  It just pretends
+// to close a prompt by putting the expansions view on top of it.
 func closePrompt(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Set the expansions view on top of any other views.
 	if _, err := gooey.SetViewOnTop("expansions"); err != nil {
 		return nil
 	}
+
 	return nil
 }
 
+// closeCatPrompt pretends to close a category prompt and focuses
+// back on the categories view.
 func closeCatPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	// Pretend to close the prompt.
 	if err := closePrompt(gooey, nil); err != nil {
 		return err
 	}
+
+	// Focus on the categories view.
 	if err := focusCat(gooey, nil); err != nil {
 		return err
 	}
+
 	return nil
 }
 
+// closeExpPrompt pretends to close an expansion prompt and focuses
+// back on the expansions view.
 func closeExpPrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	// Pretend to close the prompt.
 	if err := closePrompt(gooey, nil); err != nil {
 		return err
 	}
+
+	// Focus on the expansions view.
 	if err := focusExp(gooey, nil); err != nil {
 		return err
 	}
+
 	return nil
 }
 
+// closePhrasePrompt pretends to close a phrase prompt and focuses
+// back on the phrase view.
 func closePhrasePrompt(gooey *gocui.Gui, prompt *gocui.View) error {
+
+	// Pretend to close the prompt.
 	if err := closePrompt(gooey, nil); err != nil {
 		return err
 	}
+
+	// Focus on the phrases view.
 	if err := focusPhrase(gooey, nil); err != nil {
 		return err
 	}
+
 	return nil
 }
 
+// newCat reads a category name from a prompt and attempts to
+// add that category to Gengar's database.
 func newCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Create a new category and read the name from the prompt.
 	var cat ggdb.Category
 	cat.Name = strings.TrimSpace(prompt.ViewBuffer())
+
+	// Insert the new category in to the database.
 	ggdb.AddCategory(&cat)
 
+	// Pretend to close the prompt.
 	if err := closeCatPrompt(gooey, prompt); err != nil {
 		return err
 	}
@@ -251,11 +298,16 @@ func newCat(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// upCat reads the currently selected category's new name from a prompt
+// and attempts to update that name in Gengar's database.
 func upCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Update the currently selected category's name from the
+	// prompt and update that in the database.
 	menu.cat.Name = strings.TrimSpace(prompt.ViewBuffer())
 	ggdb.UpdateCategory(menu.cat)
 
+	// Pretend to close the prompt.
 	if err := closeCatPrompt(gooey, prompt); err != nil {
 		return err
 	}
@@ -263,11 +315,17 @@ func upCat(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// delCat deletes the currently selected category, along with
+// all of its expansions and their associated phrases.
 func delCat(gooey *gocui.Gui, view *gocui.View) error {
 
+	// Double check the currently selected category.
 	menu.cat = readCat()
+
+	// Delete it from the database.
 	ggdb.DeleteCategory(menu.cat)
 
+	// Move the cursor up one to account for the deletion.
 	if err := selUp(gooey, view); err != nil {
 		return err
 	}
@@ -275,14 +333,20 @@ func delCat(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+// newExp reads an expansion's name from a prompt and attempts to
+// add that expansion to Gengar's database.
 func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Create a new expansion, read the name from the prompt, and
+	// set the category ID to the currently selected category.
 	var exp ggdb.Expansion
-
 	exp.Name = strings.TrimSpace(prompt.ViewBuffer())
 	exp.CatID = menu.cat.ID
+
+	// Attempt to add that expansion to the database.
 	ggdb.AddExpansion(&exp)
 
+	// Pretend to close the prompt.
 	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err
 	}
@@ -290,11 +354,17 @@ func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// upExp reads the currently selected expansion's new name from a prompt
+// and attempts to update that name in Gengar's database.
 func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Read the new expansion name from the prompt.
 	menu.exp.Name = strings.TrimSpace(prompt.ViewBuffer())
+
+	// Attempt to update that in the database.
 	ggdb.UpdateExpansionName(menu.exp)
 
+	// Pretend to close the prompt.
 	if err := closeExpPrompt(gooey, nil); err != nil {
 		return err
 	}
@@ -302,11 +372,14 @@ func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// delExp deletes the currently selected expansion along with its phrases.
 func delExp(gooey *gocui.Gui, view *gocui.View) error {
 
+	// Double check the currently selected expansion and delete it.
 	menu.exp = readExp()
 	ggdb.DeleteExpansion(menu.exp)
 
+	// Move the cursor up one to account for the deletion.
 	if err := selUp(gooey, view); err != nil {
 		return err
 	}
@@ -314,14 +387,20 @@ func delExp(gooey *gocui.Gui, view *gocui.View) error {
 	return nil
 }
 
+// newPhrase reads a phrase's name from a prompt and attempts to
+// add that phrase to Gengar's database.
 func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Create a new phrase, read the name from the prompt, and set
+	// the expansion ID to the currently selected expansion.
 	var phrase ggdb.Phrase
-
 	phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
 	phrase.ExpID = menu.exp.ID
+
+	// Attempt to add that phrase to the database.
 	ggdb.AddPhrase(&phrase)
 
+	// Pretend to close the prompt.
 	if err := closePhrasePrompt(gooey, nil); err != nil {
 		return err
 	}
@@ -329,11 +408,17 @@ func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// upPhrase reads the currently selected phrases's new name from a prompt
+// and attempts to update that name in Gengar's database.
 func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 
+	// Read the new phrase name from the prompt.
 	menu.phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
+
+	// Attempt to update that in the database.
 	ggdb.UpdatePhrase(menu.phrase)
 
+	// Pretend to close the prompt.
 	if err := closePhrasePrompt(gooey, nil); err != nil {
 		return err
 	}
@@ -341,11 +426,14 @@ func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 	return nil
 }
 
+// delPhrase deletes the currently selected phrase from Gengar's database.
 func delPhrase(gooey *gocui.Gui, view *gocui.View) error {
 
+	// Double check the currently selected phrase and delete it.
 	menu.phrase = readPhrase()
 	ggdb.DeletePhrase(menu.phrase)
 
+	// Move the cursor up one to account for the deletion.
 	if err := selUp(gooey, view); err != nil {
 		return err
 	}

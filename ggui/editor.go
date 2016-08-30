@@ -41,8 +41,6 @@ func singleLineEditor(view *gocui.View, key gocui.Key, char rune, mod gocui.Modi
 		view.EditDelete(false)
 	case key == gocui.KeyInsert:
 		view.Overwrite = !view.Overwrite
-	// case key == gocui.KeyEnter:
-	// 	view.EditNewLine()
 	case key == gocui.KeyArrowDown:
 		view.MoveCursor(0, 1, false)
 	case key == gocui.KeyArrowUp:

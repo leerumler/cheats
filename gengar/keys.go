@@ -65,6 +65,7 @@ var skipKeys = []string{
 	"Num_Lock",
 }
 
+// Gengar ignores keystrokes that accompany skipMods.
 var skipMods = []string{
 	"control",
 	"mod1",

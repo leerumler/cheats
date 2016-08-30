@@ -51,6 +51,7 @@ func padText(text *string, maxX int) *string {
 	return text
 }
 
+// emptyLine returns a string of spaces of the specified length.
 func emptyLine(length int) *string {
 
 	var blank string
@@ -347,6 +348,8 @@ func drawPhrases() error {
 	return nil
 }
 
+// drawHelp creates and updates the help view, which displays the keybindings/controls
+// for the currently selected view.
 func drawHelp() error {
 
 	// Find minY, which will be the bottom of the expansions view.
@@ -368,11 +371,10 @@ func drawHelp() error {
 		// Check if the current view is set.
 		if curView := menu.gooey.CurrentView(); curView != nil {
 
-			// var helpText string
+			// Clear the view.
 			help.Clear()
 
-			// helpText := "quit: ctrl+q | up: ↑ | down: ↓ | left: ← | right: → | "
-
+			// Print a help message that relates to the currently selected view.
 			var helpText string
 			switch curView.Name() {
 			case "categories":
@@ -407,35 +409,42 @@ func drawHelp() error {
 	return nil
 }
 
-//
+// drawText creates the text view, which displays the text of the currently selected expansion.
+// The text view allows users to edit and update the expansion text.
 func drawText() error {
 
-	// Find minY, which will be the bottom of the expansions view.
+	// Find minY, which will be the bottom of the help view.
 	_, _, _, minY, err := menu.gooey.ViewPosition("help")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Create the expansion text view, if it doesn't already exist.
+	// Create the text view if it doesn't already exist.
 	if textView, err := menu.gooey.SetView("text", 0, minY, menu.maxX-1, menu.maxY-1); err != nil {
 		if err != gocui.ErrUnknownView {
 			return err
 		}
 
-		//
+		// Enable editing and line wrapping.
 		textView.Editable = true
 		textView.Wrap = true
 
+	} else {
+		return err
 	}
 
 	return nil
 }
 
+// upText updates the text view with the text from the currently selected expansion.
+// This is separated from drawText to prevent unwanted updates.
 func upText() error {
 
-	menu.exps = ggdb.ReadExpansions(menu.cat)
-	menu.exp = readExp()
+	// Ensure the currently selected expansion is up-to-date.
+	// menu.exps = ggdb.ReadExpansions(menu.cat)
+	// menu.exp = readExp()
 
+	// Clear the text view and re-fill it with the current expansion text.
 	if textView, err := menu.gooey.View("text"); err == nil {
 		textView.Clear()
 		textView.SetCursor(0, 0)
@@ -447,6 +456,7 @@ func upText() error {
 	return nil
 }
 
+// runMenu is ggui's main layout handler.  It draws each of ggui's main views.
 func runMenu(gooey *gocui.Gui) error {
 
 	// Create a ggMenu variable and populate it with some basic info.
@@ -486,10 +496,10 @@ func runMenu(gooey *gocui.Gui) error {
 	return nil
 }
 
-// GengarMenu creates an example GUI.
+// GengarMenu creates a text-based menu to control Gengar's settings.
 func GengarMenu() {
 
-	//
+	// Create a new gocui.Gui and initialize it.
 	gooey := gocui.NewGui()
 	if err := gooey.Init(); err != nil {
 		log.Panicln(err)
@@ -504,7 +514,7 @@ func GengarMenu() {
 		log.Panicln(err)
 	}
 
-	//
+	// Set the rest of the keybindinds.
 	if err := setKeyBinds(gooey); err != nil {
 		log.Panicln(err)
 	}

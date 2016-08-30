@@ -350,6 +350,7 @@ func DeleteCategory(cat *Category) {
 
 // DeleteExpansion deletes an expansion and all of its associated phrases.
 func DeleteExpansion(exp *Expansion) {
+
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
@@ -376,6 +377,7 @@ func DeleteExpansion(exp *Expansion) {
 
 // DeletePhrase deletes a phrase from Gengar's database.
 func DeletePhrase(phrase *Phrase) {
+
 	// Connect to the database.
 	db := connectGGDB()
 	defer db.Close()
@@ -388,6 +390,7 @@ func DeletePhrase(phrase *Phrase) {
 
 // ReadExpanders reads expansions from the database and returns a slice of Expanders.
 func ReadExpanders() []Expander {
+
 	var exps []Expander
 
 	// Get pointer to database connection.
