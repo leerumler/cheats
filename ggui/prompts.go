@@ -71,7 +71,7 @@ func newCatPrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("newCatPrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.SetCursor(0, 0)
 		prompt.Clear()
@@ -80,7 +80,7 @@ func newCatPrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("newCatPrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("newCatPrompt"); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func upCatPrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("upCatPrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.Clear()
 		fmt.Fprintln(prompt, menu.cat.Name)
@@ -145,7 +145,7 @@ func upCatPrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("upCatPrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("upCatPrompt"); err != nil {
 		return err
 	}
 
@@ -199,7 +199,7 @@ func newExpPrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("newExpPrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.SetCursor(0, 0)
 		prompt.Clear()
@@ -208,7 +208,7 @@ func newExpPrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("newExpPrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("newExpPrompt"); err != nil {
 		return err
 	}
 
@@ -263,7 +263,7 @@ func upExpPrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("upExpPrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.Clear()
 		fmt.Fprintln(prompt, menu.exp.Name)
@@ -273,7 +273,7 @@ func upExpPrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("upExpPrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("upExpPrompt"); err != nil {
 		return err
 	}
 
@@ -327,7 +327,7 @@ func newPhrasePrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("newPhrasePrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.SetCursor(0, 0)
 		prompt.Clear()
@@ -336,7 +336,7 @@ func newPhrasePrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("newPhrasePrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("newPhrasePrompt"); err != nil {
 		return err
 	}
 
@@ -391,7 +391,7 @@ func upPhrasePrompt(gooey *gocui.Gui, view *gocui.View) error {
 
 	if prompt, err := menu.gooey.SetViewOnTop("upPhrasePrompt"); err == nil {
 
-		menu.gooey.Editor = gocui.EditorFunc(singleLineEditor)
+		prompt.Editor = gocui.EditorFunc(singleLineEditor)
 		menu.gooey.Cursor = true
 		prompt.Clear()
 		fmt.Fprintln(prompt, menu.phrase.Name)
@@ -401,7 +401,7 @@ func upPhrasePrompt(gooey *gocui.Gui, view *gocui.View) error {
 		return err
 	}
 
-	if err := menu.gooey.SetCurrentView("upPhrasePrompt"); err != nil {
+	if _, err := menu.gooey.SetCurrentView("upPhrasePrompt"); err != nil {
 		return err
 	}
 

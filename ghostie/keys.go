@@ -36,7 +36,7 @@ var weirdSyms = map[rune]string{
 	'?':  "question",
 	'`':  "quoteleft",
 	'~':  "asciitilde",
-	// '\n': "return",
+	'\n': "return",
 }
 
 var shiftySyms = []rune{

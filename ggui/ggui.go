@@ -485,7 +485,7 @@ func runMenu(gooey *gocui.Gui) error {
 
 	// If the current view isn't set, set it to categories.
 	if gooey.CurrentView() == nil {
-		if err := gooey.SetCurrentView("categories"); err != nil {
+		if _, err := gooey.SetCurrentView("categories"); err != nil {
 			return err
 		}
 		if err := upText(); err != nil {
@@ -500,14 +500,14 @@ func runMenu(gooey *gocui.Gui) error {
 func GengarMenu() {
 
 	// Create a new gocui.Gui and initialize it.
-	gooey := gocui.NewGui()
-	if err := gooey.Init(); err != nil {
+	gooey, err := gocui.NewGui()
+	if err != nil {
 		log.Panicln(err)
 	}
 	defer gooey.Close()
 
 	// Set the layout handler.
-	gooey.SetLayout(runMenu)
+	gooey.SetManagerFunc(runMenu)
 
 	// Always have an exit strategy.
 	if err := gooey.SetKeybinding("", gocui.KeyCtrlQ, gocui.ModNone, quit); err != nil {

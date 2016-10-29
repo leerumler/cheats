@@ -89,16 +89,12 @@ func focusCat(gooey *gocui.Gui, view *gocui.View) error {
 
 	gooey.Cursor = false
 
-	// Focus on the categories view.
-	if err := gooey.SetCurrentView("categories"); err != nil {
-		return err
-	}
-
 	// Reset every view's highlight colors back to blue, then set the
 	// set the categories view's highlight color to cyan.
 	// So everyone's blue but categories.
+	// Focus on categories view.
 	resetHighlights(gooey)
-	if catView, err := gooey.View("categories"); err == nil {
+	if catView, err := gooey.SetCurrentView("categories"); err == nil {
 		catView.SelBgColor = gocui.ColorCyan
 	} else {
 		return err
@@ -122,16 +118,12 @@ func focusExp(gooey *gocui.Gui, view *gocui.View) error {
 
 	gooey.Cursor = false
 
-	// Focus on the epxansions view.
-	if err := gooey.SetCurrentView("expansions"); err != nil {
-		return err
-	}
-
 	// Reset every view's highlight colors back to blue, then set the
 	// expansions view's highlight color to cyan.
 	// So everyone's blue but expansions.
+	// Focus on expansions view.
 	resetHighlights(gooey)
-	if expView, err := gooey.View("expansions"); err == nil {
+	if expView, err := gooey.SetCurrentView("expansions"); err == nil {
 		expView.SelBgColor = gocui.ColorCyan
 	} else {
 		return err
@@ -156,16 +148,12 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 
 	gooey.Cursor = false
 
-	// Focus on the phrases view.
-	if err := gooey.SetCurrentView("phrases"); err != nil {
-		return err
-	}
-
 	// Reset every view's highlight colors back to blue, then set the
 	// set the phrases view's highlight color to cyan.
 	// So everyone's blue but phrases.
+	// Focus on the phrases view.
 	resetHighlights(gooey)
-	if phraseView, err := gooey.View("phrases"); err == nil {
+	if phraseView, err := gooey.SetCurrentView("phrases"); err == nil {
 		phraseView.SelBgColor = gocui.ColorCyan
 	} else {
 		return err
@@ -183,13 +171,15 @@ func focusPhrase(gooey *gocui.Gui, view *gocui.View) error {
 func focusText(gooey *gocui.Gui, view *gocui.View) error {
 
 	// Focus on the text view.
-	if err := gooey.SetCurrentView("text"); err != nil {
+	if textView, err := gooey.SetCurrentView("text"); err == nil {
+
+		// Set the editor function to textEditor and enable the cursor.
+		textView.Editor = gocui.EditorFunc(multiLineEditor)
+		gooey.Cursor = true
+
+	} else {
 		return err
 	}
-
-	// Set the editor function to textEditor and enable the cursor.
-	gooey.Editor = gocui.EditorFunc(multiLineEditor)
-	gooey.Cursor = true
 
 	return nil
 }
@@ -198,7 +188,7 @@ func focusText(gooey *gocui.Gui, view *gocui.View) error {
 func saveText(gooey *gocui.Gui, textView *gocui.View) error {
 
 	// Update menu.exp.Text to the text in the view.
-	menu.exp.Text = strings.TrimSpace(textView.ViewBuffer())
+	menu.exp.Text = strings.TrimSpace(textView.Buffer())
 
 	// Update the database with the new value.
 	ggdb.UpdateExpansionText(menu.exp)
@@ -285,7 +275,7 @@ func newCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	// Create a new category and read the name from the prompt.
 	var cat ggdb.Category
-	cat.Name = strings.TrimSpace(prompt.ViewBuffer())
+	cat.Name = strings.TrimSpace(prompt.Buffer())
 
 	// Insert the new category in to the database.
 	ggdb.AddCategory(&cat)
@@ -304,7 +294,7 @@ func upCat(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	// Update the currently selected category's name from the
 	// prompt and update that in the database.
-	menu.cat.Name = strings.TrimSpace(prompt.ViewBuffer())
+	menu.cat.Name = strings.TrimSpace(prompt.Buffer())
 	ggdb.UpdateCategory(menu.cat)
 
 	// Pretend to close the prompt.
@@ -340,7 +330,7 @@ func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 	// Create a new expansion, read the name from the prompt, and
 	// set the category ID to the currently selected category.
 	var exp ggdb.Expansion
-	exp.Name = strings.TrimSpace(prompt.ViewBuffer())
+	exp.Name = strings.TrimSpace(prompt.Buffer())
 	exp.CatID = menu.cat.ID
 
 	// Attempt to add that expansion to the database.
@@ -359,7 +349,7 @@ func newExp(gooey *gocui.Gui, prompt *gocui.View) error {
 func upExp(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	// Read the new expansion name from the prompt.
-	menu.exp.Name = strings.TrimSpace(prompt.ViewBuffer())
+	menu.exp.Name = strings.TrimSpace(prompt.Buffer())
 
 	// Attempt to update that in the database.
 	ggdb.UpdateExpansionName(menu.exp)
@@ -394,7 +384,7 @@ func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 	// Create a new phrase, read the name from the prompt, and set
 	// the expansion ID to the currently selected expansion.
 	var phrase ggdb.Phrase
-	phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
+	phrase.Name = strings.TrimSpace(prompt.Buffer())
 	phrase.ExpID = menu.exp.ID
 
 	// Attempt to add that phrase to the database.
@@ -413,7 +403,7 @@ func newPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 func upPhrase(gooey *gocui.Gui, prompt *gocui.View) error {
 
 	// Read the new phrase name from the prompt.
-	menu.phrase.Name = strings.TrimSpace(prompt.ViewBuffer())
+	menu.phrase.Name = strings.TrimSpace(prompt.Buffer())
 
 	// Attempt to update that in the database.
 	ggdb.UpdatePhrase(menu.phrase)
