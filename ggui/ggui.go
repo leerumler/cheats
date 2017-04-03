@@ -500,7 +500,7 @@ func runMenu(gooey *gocui.Gui) error {
 func GengarMenu() {
 
 	// Create a new gocui.Gui and initialize it.
-	gooey, err := gocui.NewGui()
+	gooey, err := gocui.NewGui(gocui.OutputNormal)
 	if err != nil {
 		log.Panicln(err)
 	}
