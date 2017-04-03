@@ -105,6 +105,11 @@ func BaitAndSwitch(com comm) {
 			// If we got an expansion back, send a series of backspaces to wipe out
 			// the input and replace it with the expansion.
 			if expansion != "" {
+
+				if Scary {
+					log.Println("Sending output:", expansion)
+				}
+
 				ghostie.Backspace(xinfo, len(keys)+1)
 				ghostie.SendKeys(xinfo, expansion)
 			}
