@@ -38,8 +38,8 @@ type Expander struct {
 // GGDB holds a connection to gengar's database.
 var GGDB *sql.DB
 
-// findGGDB locates the gengar database file.
-func findGGDB() *string {
+// FindGGDB locates the gengar database file.
+func FindGGDB() *string {
 
 	// Check the current user.
 	usr, err := user.Current()
@@ -63,7 +63,7 @@ func findGGDB() *string {
 func connectGGDB() *sql.DB {
 
 	// Find the database and open it.
-	dbfile := findGGDB()
+	dbfile := FindGGDB()
 	db, err := sql.Open("sqlite3", *dbfile)
 	if err != nil {
 		log.Panicln(err)

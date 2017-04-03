@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/leerumler/gengar/gengar"
 	"github.com/leerumler/gengar/ggdb"
@@ -12,8 +13,14 @@ func main() {
 
 	//
 	listen := flag.Bool("run", false, "Tell gengar to start listening.")
-	reset := flag.Bool("reset", false, "Reset Gengar's database. This will wipe out everything.")
+	reset := flag.Bool("reset", false, "Reset Gengar's database. This will wipe out everything, so be careful.")
 	flag.Parse()
+
+	// Check if gengar's DB exists, and create it if it doesn't.
+	dbfile := ggdb.FindGGDB()
+	if _, err := os.Stat(*dbfile); os.IsNotExist(err) {
+		ggdb.CleanSlate()
+	}
 
 	//
 	switch {
