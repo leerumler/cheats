@@ -14,6 +14,9 @@ import (
 	"github.com/leerumler/gengar/ghostie"
 )
 
+// Scary mode enables reporting tracked events.
+var Scary bool
+
 // comm defines a struct that holds communication channels between
 // our various goroutines.
 type comm struct {
@@ -92,7 +95,9 @@ func BaitAndSwitch(com comm) {
 
 			// Log the received input.  This is for debugging purposes and should
 			// be disabled on production systems.  Gengar is not a keylogger.
-			log.Println("Received Input:", keys)
+			if Scary {
+				log.Println("Received Input:", keys)
+			}
 
 			// Check the input, and if it matches, return an expansion.
 			expansion := parseMatch(keys, expanders)
@@ -100,6 +105,11 @@ func BaitAndSwitch(com comm) {
 			// If we got an expansion back, send a series of backspaces to wipe out
 			// the input and replace it with the expansion.
 			if expansion != "" {
+
+				if Scary {
+					log.Println("Sending output:", expansion)
+				}
+
 				ghostie.Backspace(xinfo, len(keys)+1)
 				ghostie.SendKeys(xinfo, expansion)
 			}
@@ -138,8 +148,10 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 			keep := true
 			for _, skip := range skipKeys {
 				if keyStr == skip {
-					log.Println("Skipped Key:", keyStr)
 					keep = false
+					if Scary {
+						log.Println("Skipped Key:", keyStr)
+					}
 				}
 			}
 
@@ -147,8 +159,10 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 			modStr := keybind.ModifierString(keyPress.State)
 			for _, mod := range skipMods {
 				if strings.Contains(modStr, mod) {
-					log.Println("Skipped Key:", keyStr)
 					keep = false
+					if Scary {
+						log.Println("Skipped Key:", keyStr)
+					}
 				}
 			}
 
@@ -160,7 +174,9 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 
 				// Log the key that was pressed.  This should really be disabled
 				// whenever it isn't necessary, as it's a bit of a security risk.
-				log.Println("Key logged:", keyStr)
+				if Scary {
+					log.Println("Key logged:", keyStr)
+				}
 			}
 
 			// If we get a sendKey, send off the collected byte slice to BaitAndSwitch
@@ -178,8 +194,10 @@ func WatchKeys(xinfo ghostie.Xinfos, com comm) {
 			// If we get a stopKey, just empty out keyBytes.
 			for _, stop := range stopKeys {
 				if keyStr == stop {
-					log.Println("Not sending:", string(keyBytes))
 					keyBytes = nil
+					if Scary {
+						log.Println("Not sending:", string(keyBytes))
+					}
 				}
 			}
 
@@ -202,7 +220,9 @@ func KeepFocus(xinfo ghostie.Xinfos, com comm) {
 	xevent.PropertyNotifyFun(
 		func(xu *xgbutil.XUtil, propEve xevent.PropertyNotifyEvent) {
 			if xinfo.XUtil.AtomNames[propEve.Atom] == "_NET_ACTIVE_WINDOW" {
-				log.Println("Focus changed, restarting event loop.")
+				if Scary {
+					log.Println("Focus changed, restarting event loop.")
+				}
 				com.refresh <- true
 				xevent.Quit(xinfo.XUtil)
 			}
@@ -234,7 +254,9 @@ func ListenClosely() {
 
 		// Establish a connection to X, find the root and active windows.
 		xinfo.Active = getActive(xinfo)
-		log.Println("Starting listen loop.")
+		if Scary {
+			log.Println("Starting listen loop.")
+		}
 
 		// Hook on the callback functions.
 		KeepFocus(xinfo, com)
@@ -257,6 +279,8 @@ func ListenClosely() {
 		xevent.Quit(xinfo.XUtil)
 
 		// Tell me when it's done.
-		log.Println("Listen loop stopped.")
+		if Scary {
+			log.Println("Listen loop stopped.")
+		}
 	}
 }
