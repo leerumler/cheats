@@ -8,6 +8,18 @@ import (
 	"github.com/leerumler/gengar/ggui"
 )
 
+/**
+
+TODO:  Master List
+
+Add database backup functionality.
+Add database restore functionality.
+Change ggdb.Expander to map[string]string.
+Pop-up error handling (for db errors).
+Scary mode.
+
+*/
+
 func main() {
 
 	//
